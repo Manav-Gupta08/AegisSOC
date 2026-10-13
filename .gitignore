@@ -1,0 +1,33 @@
+# Secrets and local configuration
+.env
+*.pem
+*.key
+*.crt
+*.p12
+authd.pass
+
+# Generated deployment state (upstream archive, rendered configs, certificates)
+deployment/wazuh/upstream/
+deployment/wazuh/runtime/
+
+# Runtime reports may contain real hostnames/IPs; only sanitized examples are committed
+reports/runtime/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+notes-local.txt
