@@ -1,0 +1,10 @@
+# AegisSOC recommended WSL2 limits (Profile A, 16 GB host).
+# Merge into %UserProfile%\.wslconfig — do not blindly overwrite existing settings.
+# Apply with `wsl --shutdown`, then restart Docker Desktop.
+
+[wsl2]
+memory=10GB
+processors=6
+swap=4GB
+# Optional: lets WSL distros reach ports Docker Desktop publishes on Windows 127.0.0.1.
+# networkingMode=mirrored
