@@ -1,0 +1,33 @@
+name: Bug report
+description: Something in AegisSOC tooling or documentation is wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not paste secrets, real IPs/hostnames, or raw logs. Use private vulnerability reporting for security issues."
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Include the `aegis` command and sanitized output.
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Docker/Compose version, Wazuh version, deployment profile
+    validations:
+      required: true

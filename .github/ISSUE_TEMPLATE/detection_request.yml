@@ -1,0 +1,34 @@
+name: Detection request
+description: Propose a new detection or a change to an existing rule
+labels: [detection]
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Behavior to detect
+      description: What activity, and why it matters.
+    validations:
+      required: true
+  - type: input
+    id: attack
+    attributes:
+      label: ATT&CK technique (if justified)
+      placeholder: T1110.001
+  - type: textarea
+    id: telemetry
+    attributes:
+      label: Required telemetry
+      description: Event sources and fields. Is this telemetry already collected?
+    validations:
+      required: true
+  - type: textarea
+    id: test
+    attributes:
+      label: Safe test procedure
+      description: How to trigger it in the lab, expected evidence, and cleanup.
+    validations:
+      required: true
+  - type: textarea
+    id: fp
+    attributes:
+      label: Expected false positives / limitations
