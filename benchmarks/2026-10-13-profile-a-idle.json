@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "measurement": "profile-a-idle-no-agents",
+  "measured_at": "2026-10-13T10:17:00Z",
+  "method": "docker stats --no-stream, ~10 minutes after first start, provisioning complete, 0 agents enrolled",
+  "host": {
+    "cpu": "Intel i7-6700 (4C/8T)",
+    "ram_gib": 15.9,
+    "docker_visible_ram_gib": 7.7,
+    "docker": "Docker Desktop 29.8.2, Compose 5.5.1, WSL2 backend",
+    "wsl_memory_cap": "none (WSL default)"
+  },
+  "wazuh_version": "4.14.8",
+  "containers": {
+    "wazuh.indexer": {"mem_used": "1.587GiB", "mem_limit": "2.5GiB", "cpu_percent": 1.93, "heap": "1g"},
+    "wazuh.manager": {"mem_used": "520MiB", "mem_limit": "3GiB", "cpu_percent": 13.87},
+    "wazuh.dashboard": {"mem_used": "156MiB", "mem_limit": "1GiB", "cpu_percent": 3.14}
+  },
+  "observations": [
+    "Indexer security index initialization took ~6 minutes on first start.",
+    "Indexer logged cluster-state writes of ~10s (slow storage for the Docker disk image).",
+    "Manager CPU peaked at ~100% during the first minutes of startup."
+  ],
+  "limitations": "Single sample; no agents or event load. Not representative of steady-state ingestion."
+}
