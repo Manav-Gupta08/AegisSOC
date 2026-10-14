@@ -45,18 +45,21 @@ at the same time as Profile A; they must be scheduled.
 | 1515/tcp | Agent enrollment (password) | `AEGIS_AGENT_BIND` | Same |
 | 55000/tcp | Wazuh API | `127.0.0.1` | Host only |
 | 9200/tcp | Indexer | `127.0.0.1` | Host only |
-| 8443/tcp | Dashboard | `127.0.0.1` | Host only |
+| 5601/tcp | Dashboard (`AEGIS_DASHBOARD_PORT`) | `127.0.0.1` | Host only |
 | 514/udp | Syslog | not published | — |
 
-**WSL2 Ubuntu reachability (NOT VERIFIED).** Whether the Ubuntu distro can reach ports that
-Docker Desktop publishes on the Windows loopback depends on WSL networking mode. Options in order
-of preference:
+**WSL2 Ubuntu reachability (VERIFIED 2026-10-13, default NAT networking).** With Docker Desktop's
+WSL2 backend, the Ubuntu distro reaches the agent ports on `127.0.0.1` without `networkingMode=mirrored`
+(`nc -zv 127.0.0.1 1515` succeeded). If a future WSL/Docker change breaks this, options in order:
 
 1. `networkingMode=mirrored` in `.wslconfig` — Windows and WSL share loopback.
 2. Set `AEGIS_AGENT_BIND` to the Windows `vEthernet (WSL)` adapter IP and restrict with a
    Windows Firewall rule scoped to the WSL subnet. Never use `0.0.0.0`.
 
 The agent install script tests connectivity before enrolling.
+
+**Dashboard port.** The default is 5601. Port 8443 was rejected on the reference host because a
+Windows service (`svchost`) already listens on it; `aegis preflight` now reports busy ports.
 
 ## Procedure
 
@@ -105,6 +108,29 @@ Rendered files live in `deployment/wazuh/runtime/` (git-ignored).
 The indexer requires `vm.max_map_count >= 262144` in the Docker Desktop VM. `aegis up` checks it and
 sets it with `wsl -d docker-desktop sysctl -w vm.max_map_count=262144` if lower. The setting does not
 persist across `wsl --shutdown`; `aegis up` re-applies it.
+
+### First-start timing (observed 2026-10-13)
+
+- The indexer took ~6 minutes from container start to an initialized security index (HTTP 503 until
+  then, 401 after). Cluster-state writes took ~10 s each, which points to slow storage for the Docker disk image.
+- Run `aegis provision` only after the indexer answers 401 to unauthenticated requests.
+- Wazuh API password updates can exceed the API's 10 s request timeout and return HTTP 500 even though
+  the change is committed. `aegis provision` confirms the change by logging in before treating it as a failure.
+
+### Troubleshooting notes
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `ports are not available ... 127.0.0.1:8443 ... forbidden` | Port already used by a Windows service | Set `AEGIS_DASHBOARD_PORT` to a free port; check with `aegis preflight` |
+| `SSLEOFError` from tooling to the indexer | Client connected by IP without SNI | Fixed: the client sends the service name as SNI and verifies it |
+| `curl` (schannel) `CERT_TRUST_REVOCATION_STATUS_UNKNOWN` | Windows checks revocation; the lab CA publishes no CRL | Use `--ssl-no-revoke` for manual probes (chain and hostname are still verified) |
+| `.env line 1 is not KEY=VALUE` | File saved with a UTF-8 BOM (PowerShell 5.1 / Notepad) | `aegis init-secrets` normalizes it; `aegis up` refuses a BOM `.env` |
+| `find: command not found` during certificate generation | Harmless message from the upstream cert tool image | All 10 certificates were produced and verified by `aegis prepare` |
+
+## Measured resource usage
+
+See [benchmarks/](../benchmarks/). Idle Profile A stack (no agents): indexer 1.59 GiB, manager 0.52 GiB,
+dashboard 0.16 GiB.
 
 ## Upgrade procedure
 

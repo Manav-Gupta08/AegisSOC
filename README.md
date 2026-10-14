@@ -15,11 +15,17 @@ Every capability is tracked with one of: **PASS** (verified with evidence), **WA
 | Area | Status | Notes |
 |---|---|---|
 | Repository foundation, threat model, architecture | PASS | Docs only |
-| Wazuh single-node deployment tooling | NOT VERIFIED | Code + unit tests; not yet run against a live stack |
-| Health checks | NOT VERIFIED | Unit-tested against recorded API shapes only |
-| Endpoint telemetry (Windows Sysmon, Linux auditd) | NOT IMPLEMENTED | Phase 3 |
-| Custom detections | NOT IMPLEMENTED | Phase 4 |
-| Detection validation runner | NOT IMPLEMENTED | Phase 5 |
+| Wazuh single-node deployment tooling | PASS | Deployed 4.14.8 on the reference host 2026-10-13; ports bound to 127.0.0.1 only |
+| Least-privilege accounts, default credential removal | PASS | Reader accounts denied write/admin (HTTP 403); upstream defaults rejected |
+| Health checks | PASS | 9/9 PASS live with one active agent (2026-10-13) |
+| Milestone 1 end-to-end detection | PASS | Real failed auth on WSL endpoint → rule 5557 alert in 0.6 s; see `reports/examples/M1-E2E-001-linux-auth-failure.json` |
+| Linux endpoint (WSL2 Ubuntu agent) | PASS (FIM realtime, journald) | FIM add/delete alerts in <1 s (M2-LNX-001). auditd NOT AVAILABLE on WSL2 (kernel audit inaccessible) |
+| Windows endpoint (Sysmon + agent) | FAIL | Agent installed but enrollment rejected (wrong password entered); Sysmon not installed. Installer fixed to re-prompt |
+| Custom detections (Linux) | PASS | 4 rules (100100, 100200–100202): logtest positive+negative and real-event e2e; see `docs/detection-methodology.md`, M2-LNX-002 |
+| Detection-as-code tooling | PASS | `aegis detections validate` (CI), `deploy` (manual, recorded), `test` (Wazuh logtest) |
+| Custom detections (Windows) | NOT IMPLEMENTED | Blocked on Windows telemetry |
+| Detection validation runner (scenarios) | PASS | 5 Linux scenarios (4 positive, 1 negative) all PASSED on the live endpoint; cleanup verified. `reports/examples/M5-SCN-001-linux-scenarios.json` |
+| Coverage matrix | PASS | `aegis coverage` → `reports/examples/coverage-matrix.md` (separates rule exists / tested / observed) |
 | Incident workflow | NOT IMPLEMENTED | Phase 6 |
 | Network IDS (Suricata) | NOT IMPLEMENTED | Optional, Profile B |
 
@@ -53,7 +59,7 @@ aegis provision        # creates least-privilege reader accounts, rotates defaul
 aegis health           # writes a JSON health report to reports/runtime/
 ```
 
-Dashboard: `https://127.0.0.1:8443` (user `admin`, password from `.env`).
+Dashboard: `https://127.0.0.1:5601` (user `admin`, password from `.env`).
 
 ## Repository layout
 
