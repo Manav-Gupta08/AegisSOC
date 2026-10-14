@@ -1,0 +1,17 @@
+{
+  "wazuh_version": "4.14.8",
+  "compose_project": "aegissoc",
+  "upstream": {
+    "repository": "https://github.com/wazuh/wazuh-docker",
+    "tag": "v4.14.8",
+    "archive_url": "https://github.com/wazuh/wazuh-docker/archive/refs/tags/v4.14.8.tar.gz",
+    "archive_sha256": "b1130aa51d5276d7c0e105b51765583fbffbfe1e097666488d72a8e339353377",
+    "archive_root": "wazuh-docker-4.14.8",
+    "pinned_on": "2026-10-13"
+  },
+  "images": {
+    "manager": "wazuh/wazuh-manager:4.14.8",
+    "indexer": "wazuh/wazuh-indexer:4.14.8",
+    "dashboard": "wazuh/wazuh-dashboard:4.14.8"
+  }
+}
