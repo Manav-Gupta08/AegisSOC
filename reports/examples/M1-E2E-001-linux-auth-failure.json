@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "evidence_id": "M1-E2E-001",
+  "type": "end_to_end_detection",
+  "sanitized": true,
+  "sanitization": "Hostname replaced with lab-host, username with lab-user. Timestamps, rule data, and outcomes are unmodified.",
+  "environment": {
+    "wazuh_version": "4.14.8",
+    "endpoint": "WSL2 Ubuntu 26.04.1 LTS, kernel 6.18.33.2-microsoft-standard-WSL2, Wazuh agent 4.14.8 (id 001)",
+    "telemetry_source": "journald via wazuh-logcollector (default agent config)"
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "triggered_at": "2026-10-13T10:32:01Z",
+      "procedure": "One sudo authentication with a deliberately wrong password",
+      "endpoint_evidence": "journald 10:32:12 sudo[637]: pam_unix(sudo:auth): authentication failure; ... user=lab-user",
+      "expected": "Authentication-failure alert from agent 001",
+      "observed": "No alert. Agent logged 'Agent stopped' at 10:32:30 and restarted at 10:33:43; journal entries written while the distro was stopping were not forwarded.",
+      "status": "FAILED",
+      "root_cause": "WSL terminates an idle distro shortly after the last process exits, stopping the agent. Telemetry gap, not a detection gap."
+    },
+    {
+      "attempt": 2,
+      "triggered_at": "2026-10-13T10:35:09.941Z",
+      "precondition": "Distro held online; agent 001 status 'active' confirmed via API before trigger",
+      "procedure": "One sudo authentication with a deliberately wrong password",
+      "expected": "Authentication-failure alert from agent 001",
+      "observed_alert": {
+        "timestamp": "2026-10-13T10:35:10.536+0000",
+        "rule_id": "5557",
+        "rule_level": 5,
+        "rule_description": "unix_chkpwd: Password check failed.",
+        "mitre": ["T1110.001"],
+        "full_log": "Oct 13 10:35:10 lab-host unix_chkpwd[657]: password check failed for user (lab-user)"
+      },
+      "event_to_alert_seconds": 0.6,
+      "observed_in_index_within_seconds": 10.2,
+      "status": "PASSED"
+    }
+  ],
+  "limitations": [
+    "Single event; no repeated-failure (brute-force) correlation tested.",
+    "Ubuntu 26.04 uses sudo-rs; Wazuh's classic sudo rules did not fire. Only the generic unix_chkpwd rule matched.",
+    "Index visibility time is bounded by the 5 s polling interval of the test."
+  ]
+}
