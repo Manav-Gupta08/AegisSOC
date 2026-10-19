@@ -16,6 +16,9 @@ import yaml
 from .clients import ServiceError, WazuhApi
 
 RULE_ID_RANGE = range(100000, 101000)
+# Detections claim ATT&CK techniques; pipeline checks only prove a telemetry path works; suppressions silence noise.
+KIND_RANGES = {"detection": range(100000, 100800), "pipeline_check": range(100800, 100900),
+               "suppression": range(100900, 101000)}
 STATUSES = {"experimental", "tested", "deprecated"}
 REQUIRED_FIELDS = ("id", "title", "status", "level", "rule_file", "rationale", "telemetry", "mitre",
                    "false_positives", "limitations", "investigation", "tests")
@@ -39,6 +42,10 @@ class RuleInfo:
 
 def detections_root(root: Path) -> Path:
     return root / "detections"
+
+
+def _range_text(ids: range) -> str:
+    return f"{ids.start}-{ids.stop - 1}"
 
 
 def rule_files(root: Path) -> list[Path]:
@@ -105,16 +112,24 @@ def validate(root: Path) -> list[RuleInfo]:
         if missing:
             raise DetectionError(f"rule {r.id}: metadata missing {missing}")
         is_suppression = m.get("kind") == "suppression"
-        if is_suppression and (r.level != 0 or not 100900 <= r.id <= 100999):
-            raise DetectionError(f"rule {r.id}: suppressions must be level 0 and use ids 100900-100999")
-        if not is_suppression and not m["mitre"]:
+        kind = m.get("kind", "detection")
+        if kind not in KIND_RANGES:
+            raise DetectionError(f"rule {r.id}: kind must be one of {sorted(KIND_RANGES)}")
+        if r.level == 0 and not is_suppression:
+            raise DetectionError(f"rule {r.id}: level 0 silences alerts; declare kind: suppression")
+        if r.id not in KIND_RANGES[kind]:
+            raise DetectionError(f"rule {r.id}: {kind} rules use ids {_range_text(KIND_RANGES[kind])}")
+        if is_suppression and r.level != 0:
+            raise DetectionError(f"rule {r.id}: suppressions must be level 0")
+        if kind == "pipeline_check" and (m["mitre"] or not 1 <= r.level <= 5):
+            raise DetectionError(f"rule {r.id}: pipeline checks prove telemetry flows; they claim no ATT&CK "
+                                 "technique and use levels 1-5")
+        if kind == "detection" and not m["mitre"]:
             raise DetectionError(f"rule {r.id}: detections need at least one ATT&CK mapping")
         if m["status"] not in STATUSES:
             raise DetectionError(f"rule {r.id}: status must be one of {sorted(STATUSES)}")
         if int(m["level"]) != r.level:
             raise DetectionError(f"rule {r.id}: metadata level {m['level']} != rule level {r.level}")
-        if r.level == 0 and not is_suppression:
-            raise DetectionError(f"rule {r.id}: level 0 silences alerts; declare kind: suppression")
         if (root / m["rule_file"]).resolve() != r.file.resolve():
             raise DetectionError(f"rule {r.id}: metadata rule_file does not point to {r.file.name}")
         bad = [t for t in m["mitre"] if not MITRE_ID.match(str(t))]

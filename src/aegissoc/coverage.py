@@ -16,7 +16,7 @@ def build_matrix(root: Path, scenario_report: dict[str, Any] | None) -> dict[str
 
     rows = []
     for rule_id, m in sorted(meta.items()):
-        if m.get("kind") == "suppression":
+        if m.get("kind", "detection") != "detection":
             continue
         rid = str(rule_id)
         positive = [s for s in scenarios.values() if rid in map(str, s["expected"].get("detection_rules") or [])]

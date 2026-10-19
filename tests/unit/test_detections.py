@@ -227,3 +227,37 @@ def test_deploy_does_not_restart_on_invalid_config(tmp_path):
     with pytest.raises(DetectionError, match="rejected"):
         detections.deploy(repo, Api(), log=lambda m: None, run=clean)
     assert "/manager/restart" not in calls
+
+
+def pipeline_check_repo(tmp_path, rid=100850, level=3, mitre=""):
+    repo = make_repo(tmp_path, rid=rid, level=level, mitre=mitre)
+    meta = repo / "detections" / "metadata" / f"{rid}.yml"
+    meta.write_text("kind: pipeline_check\n" + meta.read_text())
+    return repo
+
+
+def test_pipeline_check_needs_no_attack_mapping(tmp_path):
+    assert [r.id for r in validate(pipeline_check_repo(tmp_path))] == [100850]
+
+
+@pytest.mark.parametrize("kwargs,match", [
+    ({"mitre": "T1110"}, "claim no ATT&CK"),
+    ({"level": 10}, "levels 1-5"),
+    ({"rid": 100150}, "pipeline_check rules use ids 100800-100899"),
+])
+def test_pipeline_check_constraints(tmp_path, kwargs, match):
+    with pytest.raises(DetectionError, match=match):
+        validate(pipeline_check_repo(tmp_path, **kwargs))
+
+
+def test_detection_cannot_use_reserved_ranges(tmp_path):
+    with pytest.raises(DetectionError, match="detection rules use ids 100000-100799"):
+        validate(make_repo(tmp_path, rid=100850))
+
+
+def test_unknown_kind_rejected(tmp_path):
+    repo = make_repo(tmp_path)
+    meta = repo / "detections" / "metadata" / "100150.yml"
+    meta.write_text("kind: canary\n" + meta.read_text())
+    with pytest.raises(DetectionError, match="kind must be one of"):
+        validate(repo)
