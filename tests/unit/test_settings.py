@@ -31,7 +31,17 @@ def test_lock_file_is_valid_and_pinned():
     root = find_repo_root(Path(__file__).parent)
     lock = StackLock.load(Paths(root).lock_file)
     assert lock.wazuh_version in lock.archive_url
-    assert all(img.endswith(f":{lock.wazuh_version}") for img in lock.images.values())
+    assert all(f":{lock.wazuh_version}@sha256:" in img for img in lock.images.values())
+
+
+def test_override_images_match_digest_pins():
+    import re
+
+    root = find_repo_root(Path(__file__).parent)
+    paths = Paths(root)
+    override = paths.override_file.read_text()
+    pinned = set(re.findall(r"^\s+image:\s*(\S+)$", override, re.MULTILINE))
+    assert pinned == set(StackLock.load(paths.lock_file).images.values())
 
 
 def test_lock_rejects_bad_digest(tmp_path: Path):

@@ -3,6 +3,7 @@
 # AEGIS_RUNTIME_DIR is injected by the `aegis` CLI; secrets come from the repo-root .env.
 services:
   wazuh.manager:
+    image: wazuh/wazuh-manager:4.14.8@sha256:412f665c77af5497780d29d0d9f069d7a169c5eca45e9a3a47a587d9cfc99b55
     ports: !override
       - "${AEGIS_AGENT_BIND:-127.0.0.1}:1514:1514"
       - "${AEGIS_AGENT_BIND:-127.0.0.1}:1515:1515"
@@ -19,6 +20,7 @@ services:
     mem_limit: 3g
 
   wazuh.indexer:
+    image: wazuh/wazuh-indexer:4.14.8@sha256:6a9c1e3827da627a70859213b3e9cfe43193a492e358953de332b94de33b07de
     ports: !override
       - "127.0.0.1:9200:9200"
     environment:
@@ -28,6 +30,7 @@ services:
     mem_limit: 2560m
 
   wazuh.dashboard:
+    image: wazuh/wazuh-dashboard:4.14.8@sha256:dd338d22355e8f0cdf8cc97d5b928539d56061b83c3274a79059e60ad5b8ac14
     ports: !override
       - "127.0.0.1:${AEGIS_DASHBOARD_PORT:-5601}:5601"
     environment:

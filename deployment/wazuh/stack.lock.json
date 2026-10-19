@@ -10,8 +10,9 @@
     "pinned_on": "2026-10-13"
   },
   "images": {
-    "manager": "wazuh/wazuh-manager:4.14.8",
-    "indexer": "wazuh/wazuh-indexer:4.14.8",
-    "dashboard": "wazuh/wazuh-dashboard:4.14.8"
-  }
+    "manager": "wazuh/wazuh-manager:4.14.8@sha256:412f665c77af5497780d29d0d9f069d7a169c5eca45e9a3a47a587d9cfc99b55",
+    "indexer": "wazuh/wazuh-indexer:4.14.8@sha256:6a9c1e3827da627a70859213b3e9cfe43193a492e358953de332b94de33b07de",
+    "dashboard": "wazuh/wazuh-dashboard:4.14.8@sha256:dd338d22355e8f0cdf8cc97d5b928539d56061b83c3274a79059e60ad5b8ac14"
+  },
+  "image_digests_recorded": "2026-10-13, trust-on-first-use from Docker Hub pulls over TLS"
 }
