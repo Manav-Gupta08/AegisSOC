@@ -34,7 +34,7 @@ Every capability is tracked with one of: **PASS** (verified with evidence), **WA
 | Backup | PASS | `aegis backup create` ran live 2026-10-14: ~795 MB, 448 s downtime, SHA-256 manifest |
 | Restore verification | NOT VERIFIED | The one live run (2026-10-14) restored agents, rules, and retention policy but stopped waiting at a partial alert count (38 of 664) and reported FAILED. The wait was fixed and unit-tested; not yet re-run live |
 | Linux host (Docker Engine) | NOT VERIFIED | Tooling supports it (host kernel `vm.max_map_count`, local scenario executor, owner-only secret files); unit-tested only, no live deployment yet |
-| Response actions | NOT IMPLEMENTED (by design) | Cases record recommendations; nothing is executed automatically |
+| Response playbooks | PASS (offline) | 3 reviewed playbooks; case actions are proposed, approved by a second analyst, and executed **in simulation only**, all in the hash-chained audit trail. Real execution is not implemented by design |
 | AegisSOC web UI | NOT IMPLEMENTED | Alerts are investigated in the Wazuh dashboard; cases, validation, coverage, and metrics are CLI + Markdown/JSON reports |
 | Network IDS (Suricata) | NOT IMPLEMENTED | Optional, Profile B |
 
@@ -98,6 +98,7 @@ Dashboard: `https://127.0.0.1:5601` (user `admin`, password from `.env`).
 | `deployment/wsl/` | Recommended WSL2 resource limits (Windows hosts) |
 | `detections/` | Custom Wazuh rules and their metadata (detection-as-code) |
 | `scenarios/` | Reviewed simulation manifests with expected detections |
+| `playbooks/` | Reviewed response playbooks (manual steps and simulation-only actions) |
 | `schemas/` | Incident case JSON Schema |
 | `reports/examples/` | Sanitized evidence from the live lab |
 | `benchmarks/` | Measured resource usage |

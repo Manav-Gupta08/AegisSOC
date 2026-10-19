@@ -42,6 +42,9 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
   Linux deployment and teardown procedures. Not yet verified on a live Linux host.
 - `AEGIS_LINUX_EXECUTOR` (`wsl:<distro>` or `local`) selects how scenario commands reach the Linux endpoint.
 - Scenario runner confirms the endpoint's agent id and name before running anything; mismatches are SKIPPED.
+- Response playbooks (`playbooks/`, `aegis playbooks validate|list`) and case response actions
+  (`aegis case propose|approve|reject|execute --simulate`): allowlisted action types, validated targets,
+  two-person approval, single execution, simulation only, all in the case audit trail.
 
 ### Changed
 - Scenario manifests no longer name a WSL distro; the transport is a host setting.

@@ -23,7 +23,7 @@ stateDiagram-v2
 ```
 
 `containment_recommended` means a recommendation was **recorded**, not that anything was contained.
-AegisSOC performs no automated response actions.
+AegisSOC never changes an endpoint; response actions below are simulated and recorded only.
 
 ## Commands
 
@@ -37,6 +37,38 @@ aegis case correct CASE-... <field> <value> --reason "..."   # only change allow
 aegis case verify CASE-...                             # audit chain, replay, evidence hashes
 aegis case report CASE-... --redact <hostname> <user>  # Markdown + JSON, escaped and redacted
 ```
+
+## Response playbooks and actions
+
+Playbooks in `playbooks/PB-NNN-*.yml` are reviewed like detections (`aegis playbooks validate` runs in CI).
+Each applies to specific AegisSOC rules and lists manual steps and action steps. Action types are an allowlist:
+
+| Action | Target | Simulated plan |
+|---|---|---|
+| `isolate_host` | the endpoint | block all traffic except to the Wazuh manager |
+| `disable_account` | non-root Linux user name | lock and expire the account |
+| `quarantine_file` | normalized absolute path (system directories refused) | move the file to a root-only quarantine directory |
+| `block_ip` | IP address (loopback, unspecified, multicast refused) | drop traffic to and from the address |
+
+```sh
+aegis playbooks list
+aegis case propose CASE-... PB-001 3 --endpoint <host> --target /etc/sudoers.d/x --purpose "..." --actor alice
+aegis case approve CASE-... ACT-001 --actor bob          # must differ from the proposer
+aegis case execute CASE-... ACT-001 --simulate --actor bob
+aegis case reject CASE-... ACT-001 --reason "..." --actor bob
+```
+
+Safeguards, each enforced when the audit log is replayed:
+
+- Proposals only while `investigating` or `containment_recommended`, only for playbooks that apply to the case's
+  alerts, and only against an affected endpoint of the case.
+- A second open proposal for the same action, endpoint, and target is refused.
+- Approval by the proposer is refused; execution needs approval and happens at most once.
+- Only simulated execution exists. It records the initiator, target, purpose, approver, plan, and time.
+- A case cannot be resolved or marked false positive while actions are still proposed or approved.
+
+Analyst names are self-declared (`--actor`), so the two-person rule documents intent but does not authenticate
+anyone. Real execution would first need authenticated identities and endpoint-side authorization.
 
 ## Integrity model
 
