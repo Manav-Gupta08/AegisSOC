@@ -58,6 +58,14 @@ if (Test-Enrolled) {
     $secure = Read-Host 'Enrollment password (WAZUH_ENROLLMENT_PASSWORD from .env)' -AsSecureString
     $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     $passFile = Join-Path $agentDir 'authd.pass'
+    # Restrict the file before the password is written so it is never readable by other users, even briefly.
+    New-Item -ItemType File -Force -Path $passFile | Out-Null
+    $acl = New-Object Security.AccessControl.FileSecurity
+    $acl.SetAccessRuleProtection($true, $false)
+    foreach ($id in 'BUILTIN\Administrators', 'NT AUTHORITY\SYSTEM') {
+        $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($id, 'FullControl', 'Allow')))
+    }
+    Set-Acl -Path $passFile -AclObject $acl
     try {
         $plain = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr).Trim()
         if (-not $plain) { throw 'Empty enrollment password' }
@@ -66,12 +74,6 @@ if (Test-Enrolled) {
         [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
         Remove-Variable plain -ErrorAction SilentlyContinue
     }
-    $acl = New-Object Security.AccessControl.FileSecurity
-    $acl.SetAccessRuleProtection($true, $false)
-    foreach ($id in 'BUILTIN\Administrators', 'NT AUTHORITY\SYSTEM') {
-        $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($id, 'FullControl', 'Allow')))
-    }
-    Set-Acl -Path $passFile -AclObject $acl
 
     # Restart so a running agent re-reads authd.pass and retries enrollment immediately.
     Restart-Service WazuhSvc
@@ -81,8 +83,10 @@ if (Test-Enrolled) {
     }
     if (-not (Test-Enrolled)) {
         Write-Output (Get-Content (Join-Path $agentDir 'ossec.log') -Tail 10)
-        throw 'Agent did not obtain a key. If the log shows an invalid password, rerun and re-enter it.'
+        throw ("Agent did not obtain a key. 'Invalid password': rerun and re-enter it. 'Invalid group': run " +
+               "'aegis agent-config apply' on the stack host first so the '$Group' group exists.")
     }
 }
+if ((Get-Service WazuhSvc).Status -ne 'Running') { throw 'WazuhSvc is not running (see ossec.log)' }
 Write-Output "[ok] Agent '$AgentName' enrolled in group '$Group'; confirm with 'aegis health'"
 Stop-Transcript | Out-Null
