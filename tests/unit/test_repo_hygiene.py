@@ -6,18 +6,18 @@ from pathlib import Path
 
 import pytest
 
+from aegissoc.health import DEFAULT_API_CREDENTIALS, DEFAULT_INDEXER_CREDENTIALS
+
 ROOT = Path(__file__).resolve().parents[2]
+# Built from health.py so this file does not contain the literal values it searches for.
+_UPSTREAM_PASSWORDS = {p for u, p in DEFAULT_API_CREDENTIALS + DEFAULT_INDEXER_CREDENTIALS if p != u}
 PATTERNS = {
     "filled-in password variable": re.compile(r"^[A-Z0-9_]*PASSWORD=\S+", re.MULTILINE),
     "private key block": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
-    "upstream default indexer password": re.compile(r"SecretPassword"),
-    "upstream default API password": re.compile(re.escape("MyS3cr37P450r.*-")),
+    "upstream default password": re.compile("|".join(re.escape(p) for p in sorted(_UPSTREAM_PASSWORDS))),
 }
-# Files that intentionally contain upstream default values: the health check tests that they are rejected.
-ALLOWED = {
-    "upstream default indexer password": {"src/aegissoc/health.py"},
-    "upstream default API password": {"src/aegissoc/health.py"},
-}
+# The health check intentionally contains upstream defaults: it verifies they are rejected.
+ALLOWED = {"upstream default password": {"src/aegissoc/health.py"}}
 
 
 def tracked_files() -> list[str]:
