@@ -1,0 +1,24 @@
+id: 100202
+title: Local account database changed
+status: tested
+level: 8
+rule_file: detections/wazuh/rules/aegissoc_linux_rules.xml
+rationale: >
+  Changes to passwd/group/shadow indicate account creation, group membership changes, or password
+  changes, which are used for persistence and privilege escalation.
+telemetry:
+  - Wazuh FIM on /etc/passwd, /etc/group, /etc/shadow, /etc/gshadow (no content diffs for shadow files)
+mitre: [T1136.001, T1098]
+false_positives:
+  - Routine password changes and package installs creating system users.
+limitations:
+  - Does not identify which account changed; review the passwd/group diff.
+  - No actor attribution on WSL2 (real-time mode).
+  - Depends on directory-level FIM of /etc; file-level watches are lost after atomic replaces (M2-LNX-002).
+investigation:
+  - Compare the passwd/group diff for new UID 0 accounts or new sudo/admin group members.
+tests:
+  e2e:
+    - name: create and delete temporary groups twice (4 atomic replacements)
+      evidence: reports/examples/M2-LNX-002-linux-detections.json
+      result: PASSED (4/4 alerts after the directory-watch fix)

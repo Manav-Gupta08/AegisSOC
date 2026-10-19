@@ -1,0 +1,25 @@
+id: 100200
+title: sudoers configuration changed
+status: tested
+level: 10
+rule_file: detections/wazuh/rules/aegissoc_linux_rules.xml
+rationale: >
+  Changes to /etc/sudoers or /etc/sudoers.d grant or alter root privilege and are a common
+  privilege-escalation and persistence step. Built-in FIM rules alert at generic levels 5-7.
+telemetry:
+  - Wazuh FIM on /etc/sudoers and /etc/sudoers.d (group linux agent.conf)
+mitre: [T1548.003]
+false_positives:
+  - Package installs/upgrades that ship sudoers.d drop-ins.
+  - Legitimate administrator changes.
+limitations:
+  - On WSL2, FIM runs in real-time mode without whodata, so the actor is not recorded.
+  - Changes reverted between FIM events may be missed if the agent is offline.
+investigation:
+  - Review the diff (report_changes) for added NOPASSWD or ALL entries.
+  - Correlate with package manager logs (dpkg.log) and the logged-in users at that time.
+tests:
+  e2e:
+    - name: add and delete a comment-only file in /etc/sudoers.d
+      evidence: reports/examples/M2-LNX-002-linux-detections.json
+      result: PASSED (added and deleted both alerted as 100200)

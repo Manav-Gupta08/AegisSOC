@@ -1,0 +1,47 @@
+id: 100100
+title: Repeated local authentication failures for one user
+status: tested
+level: 10
+rule_file: detections/wazuh/rules/aegissoc_linux_rules.xml
+rationale: >
+  Built-in rule 5551 correlates PAM failures by source IP. Local failures (sudo, su, unix_chkpwd)
+  carry no source IP, so repeated local password guessing never produced a correlated alert.
+  This rule correlates any authentication_failed alert by srcuser.
+telemetry:
+  - journald via wazuh-logcollector (PAM, sudo, unix_chkpwd) on Linux agents
+mitre: [T1110.001]
+false_positives:
+  - A user repeatedly mistyping their own password (6 failures in 2 minutes is unusual but possible).
+  - A misconfigured script or service retrying with a stale password.
+limitations:
+  - Each sudo attempt can emit 2 failure events (pam_unix + unix_chkpwd), so 6 events can be ~3 attempts.
+  - Requires the srcuser field; failures decoded without it are not counted.
+  - Spraying many users (one attempt each) does not trigger it.
+investigation:
+  - Identify the session (tty, parent process) that generated the failures.
+  - Check for a successful authentication for the same user right after the failures (5402/5501).
+  - Confirm with the user whether the attempts were theirs.
+tests:
+  logtest:
+    - name: six failures for the same user trigger the correlation
+      log_format: syslog
+      location: journald
+      events:
+        - "Oct 13 10:35:10 lab-host unix_chkpwd[657]: password check failed for user (lab-user)"
+        - "Oct 13 10:35:12 lab-host unix_chkpwd[658]: password check failed for user (lab-user)"
+        - "Oct 13 10:35:14 lab-host unix_chkpwd[659]: password check failed for user (lab-user)"
+        - "Oct 13 10:35:16 lab-host unix_chkpwd[660]: password check failed for user (lab-user)"
+        - "Oct 13 10:35:18 lab-host unix_chkpwd[661]: password check failed for user (lab-user)"
+        - "Oct 13 10:35:20 lab-host unix_chkpwd[662]: password check failed for user (lab-user)"
+      expect_last: 100100
+    - name: failures spread across different users do not trigger
+      log_format: syslog
+      location: journald
+      events:
+        - "Oct 13 10:35:10 lab-host unix_chkpwd[657]: password check failed for user (user-a)"
+        - "Oct 13 10:35:12 lab-host unix_chkpwd[658]: password check failed for user (user-b)"
+        - "Oct 13 10:35:14 lab-host unix_chkpwd[659]: password check failed for user (user-c)"
+        - "Oct 13 10:35:16 lab-host unix_chkpwd[660]: password check failed for user (user-a)"
+        - "Oct 13 10:35:18 lab-host unix_chkpwd[661]: password check failed for user (user-b)"
+        - "Oct 13 10:35:20 lab-host unix_chkpwd[662]: password check failed for user (user-c)"
+      expect_none: [100100]

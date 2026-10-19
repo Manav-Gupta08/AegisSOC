@@ -1,0 +1,54 @@
+<!--
+  AegisSOC Linux detections. Rule IDs 100100-100299. Metadata: detections/metadata/<id>.yml
+  Deployed with `aegis detections deploy` (manual, reviewed). Never edited on the manager directly.
+-->
+<group name="aegissoc,linux,">
+
+  <!-- 100100: built-in 5551 correlates on srcip; local sudo/su failures have none, so this correlates on user. -->
+  <rule id="100100" level="10" frequency="6" timeframe="120">
+    <if_matched_group>authentication_failed</if_matched_group>
+    <!-- srcuser is a static decoder field; same_field only applies to dynamic fields. -->
+    <same_srcuser />
+    <description>AegisSOC: repeated authentication failures for user $(srcuser) within 2 minutes.</description>
+    <mitre>
+      <id>T1110.001</id>
+    </mitre>
+    <group>authentication_failures,aegissoc_correlation,</group>
+  </rule>
+
+  <!-- 100200: sudoers changes grant or alter privilege. -->
+  <rule id="100200" level="10">
+    <if_sid>550,553,554</if_sid>
+    <field name="file" type="pcre2">^/etc/sudoers(\.d/.*)?$</field>
+    <description>AegisSOC: sudoers configuration changed ($(file)).</description>
+    <mitre>
+      <id>T1548.003</id>
+    </mitre>
+    <group>aegissoc_privilege,syscheck,</group>
+  </rule>
+
+  <!-- 100201: scheduled tasks and units are common persistence paths. -->
+  <rule id="100201" level="10">
+    <if_sid>550,553,554</if_sid>
+    <field name="file" type="pcre2">^(/etc/crontab$|/etc/cron\.d/|/var/spool/cron/crontabs/|/etc/systemd/system/)</field>
+    <description>AegisSOC: scheduled task or service unit changed ($(file)).</description>
+    <mitre>
+      <id>T1053.003</id>
+      <id>T1543.002</id>
+    </mitre>
+    <group>aegissoc_persistence,syscheck,</group>
+  </rule>
+
+  <!-- 100202: account database changes (new users, group membership). -->
+  <rule id="100202" level="8">
+    <if_sid>550,553,554</if_sid>
+    <field name="file" type="pcre2">^/etc/(passwd|group|shadow|gshadow)$</field>
+    <description>AegisSOC: account database changed ($(file)).</description>
+    <mitre>
+      <id>T1136.001</id>
+      <id>T1098</id>
+    </mitre>
+    <group>aegissoc_account,syscheck,</group>
+  </rule>
+
+</group>

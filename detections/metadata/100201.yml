@@ -1,0 +1,25 @@
+id: 100201
+title: Scheduled task or systemd unit changed
+status: tested
+level: 10
+rule_file: detections/wazuh/rules/aegissoc_linux_rules.xml
+rationale: >
+  Cron entries and systemd units in /etc/systemd/system are common persistence mechanisms.
+telemetry:
+  - Wazuh FIM on /etc/crontab, /etc/cron.d, /var/spool/cron/crontabs, /etc/systemd/system
+mitre: [T1053.003, T1543.002]
+false_positives:
+  - systemctl enable/disable creates and removes symlinks under /etc/systemd/system.
+  - Package installs adding cron.d jobs.
+limitations:
+  - User-level systemd units (~/.config/systemd/user) are not monitored.
+  - No actor attribution on WSL2 (real-time mode).
+  - Only the systemd path has a scenario (LNX-004); the cron path (T1053.003) is untested.
+investigation:
+  - Inspect the new/changed unit or cron entry and the binary it runs.
+  - Check whether the change coincides with a package install or an admin action.
+tests:
+  e2e:
+    - name: create and remove a disabled no-op unit file in /etc/systemd/system
+      evidence: reports/examples/M2-LNX-002-linux-detections.json
+      result: PASSED (added and deleted both alerted as 100201)
