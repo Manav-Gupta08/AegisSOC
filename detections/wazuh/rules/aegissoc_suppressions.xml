@@ -1,0 +1,16 @@
+<!--
+  AegisSOC suppressions. Rule IDs 100900-100999. Each one needs evidence that the alerts are false positives
+  and a compensating control. Metadata: detections/metadata/<id>.yml (kind: suppression).
+-->
+<group name="aegissoc,suppression,">
+
+  <!-- 100900: rust-coreutils (Ubuntu 26.04) binaries match rootcheck's GNU-era trojan string signatures. -->
+  <rule id="100900" level="0">
+    <if_sid>510</if_sid>
+    <field name="title">^Trojaned version of file detected.$</field>
+    <field name="file" type="pcre2">^/(usr/)?s?bin/[a-z0-9._-]+$</field>
+    <description>AegisSOC suppression: rootcheck trojan signature on a system binary (verified rust-coreutils false positive).</description>
+    <group>aegissoc_suppression,</group>
+  </rule>
+
+</group>

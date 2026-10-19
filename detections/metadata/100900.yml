@@ -1,0 +1,34 @@
+id: 100900
+kind: suppression
+title: Suppress rootcheck trojan signatures on system binaries (rust-coreutils)
+status: tested
+level: 0
+rule_file: detections/wazuh/rules/aegissoc_suppressions.xml
+rationale: >
+  257 of 655 alerts (39%) in the first week were rule 510 "Trojaned version of file detected" for
+  /bin and /usr/bin tools. On the Ubuntu 26.04 endpoint these are rust-coreutils binaries; dpkg --verify
+  rust-coreutils reported no checksum mismatches (2026-10-14). Rootcheck's string signatures target GNU
+  coreutils and match strings in the Rust binaries.
+telemetry:
+  - Wazuh rootcheck on Linux agents
+mitre: []
+false_positives:
+  - Not applicable (suppression).
+limitations:
+  - A real trojaned system binary would also be suppressed by this rule.
+  - Compensating controls - FIM checksums on /bin, /usr/bin, /sbin, /usr/sbin (agent default scheduled scan)
+    and periodic dpkg --verify. Neither is real-time for these paths.
+  - Re-evaluate when Wazuh updates rootcheck signatures or the endpoint changes coreutils implementation.
+investigation:
+  - If a FIM checksum alert fires for a system binary, verify it with dpkg --verify <package> before trusting it.
+tests:
+  # Wazuh logtest cannot decode rootcheck events (internal message type), so only end-to-end testing applies.
+  e2e:
+    - name: after deployment and agent restart, a completed rootcheck scan yields no rule 510 trojan alerts
+      procedure: >
+        Restart the Linux agent, wait for "Ending rootcheck scan" in the agent log, then count rule 510
+        alerts with data.title "Trojaned version of file detected." since the restart. Expected 0.
+        Absence is only meaningful because the scan is confirmed to have completed.
+      result: >
+        PASSED 2026-10-14 - agent restarted 04:02:24Z, rootcheck scan ended 04:05:25Z, 0 trojan alerts after
+        restart vs 257 in the previous 24 h.
