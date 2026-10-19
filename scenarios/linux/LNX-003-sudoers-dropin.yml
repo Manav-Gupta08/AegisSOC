@@ -6,7 +6,6 @@ description: >
   Creates a comment-only file in /etc/sudoers.d (validated by visudo, grants nothing), then removes it.
 target:
   agent_group: linux
-  wsl_distro: Ubuntu
 prerequisites:
   - name: visudo available
     run_as: root

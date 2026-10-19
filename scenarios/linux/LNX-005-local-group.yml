@@ -6,7 +6,6 @@ description: >
   Creates an empty local group (no members) and removes it, changing /etc/group and /etc/gshadow.
 target:
   agent_group: linux
-  wsl_distro: Ubuntu
 prerequisites:
   - name: group does not already exist
     run_as: root

@@ -7,7 +7,6 @@ description: >
   authentication-failure telemetry but must not be escalated to the correlation rule.
 target:
   agent_group: linux
-  wsl_distro: Ubuntu
 prerequisites:
   - name: no PAM account lockout configured
     run_as: root

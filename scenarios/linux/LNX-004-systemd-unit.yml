@@ -6,7 +6,6 @@ description: >
   Writes a oneshot unit running /bin/true to /etc/systemd/system without enabling or starting it, then removes it.
 target:
   agent_group: linux
-  wsl_distro: Ubuntu
 prerequisites:
   - name: unit does not already exist
     run_as: root

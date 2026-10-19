@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import re
 import subprocess
+import sys
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -18,6 +19,9 @@ SCENARIO_ID = re.compile(r"^(LNX|WIN|NET)-\d{3}$")
 TECHNIQUE = re.compile(r"^T\d{4}(\.\d{3})?$")
 RUN_AS = {"root", "default"}
 MAX_TIMEOUT = 600
+EXECUTOR_SPEC = re.compile(r"^(local|wsl:[A-Za-z0-9._-]+)$")
+# Prints only the agent id and name; the enrollment key in the same line never leaves the endpoint.
+IDENTITY_COMMAND = {"run_as": "root", "argv": ["awk", "NR==1 {print $1, $2}", "/var/ossec/etc/client.keys"]}
 
 PASSED, FAILED, TIMED_OUT, INCONCLUSIVE, SKIPPED, CLEANUP_REQUIRED = (
     "PASSED", "FAILED", "TIMED_OUT", "INCONCLUSIVE", "SKIPPED", "CLEANUP_REQUIRED")
@@ -27,6 +31,31 @@ Runner = Callable[..., subprocess.CompletedProcess]
 
 class ScenarioError(ValueError):
     pass
+
+
+@dataclass(frozen=True)
+class Executor:
+    """How scenario commands reach the Linux endpoint: `wsl:<distro>` on a Windows host, `local` on a Linux host."""
+
+    spec: str
+
+    @classmethod
+    def parse(cls, spec: str) -> Executor:
+        if not EXECUTOR_SPEC.match(spec):
+            raise ScenarioError(f"AEGIS_LINUX_EXECUTOR must be 'local' or 'wsl:<distro>', got {spec!r}")
+        return cls(spec)
+
+    def argv(self, cmd: dict[str, Any]) -> list[str]:
+        root = cmd["run_as"] == "root"
+        if self.spec == "local":
+            # -n: fail instead of prompting; the operator caches credentials with `sudo -v` beforehand.
+            return ["sudo", "-n", "--", *cmd["argv"]] if root else list(cmd["argv"])
+        distro = self.spec.split(":", 1)[1]
+        return ["wsl", "-d", distro, *(["-u", "root"] if root else []), "--", *cmd["argv"]]
+
+
+def default_executor(platform: str = sys.platform) -> str:
+    return "wsl:Ubuntu" if platform == "win32" else "local"
 
 
 def _check_command(sid: str, where: str, cmd: Any) -> None:
@@ -51,10 +80,11 @@ def validate_scenario(data: dict[str, Any], path: Path) -> dict[str, Any]:
     if data["platform"] != "linux":
         raise ScenarioError(f"{sid}: only platform 'linux' is supported by this runner")
     target = data["target"]
-    if not target.get("agent_group") or not target.get("wsl_distro"):
-        raise ScenarioError(f"{sid}: target needs agent_group and wsl_distro")
-    if not re.fullmatch(r"[A-Za-z0-9._-]+", str(target["wsl_distro"])):
-        raise ScenarioError(f"{sid}: invalid wsl_distro")
+    if not isinstance(target, dict) or not target.get("agent_group"):
+        raise ScenarioError(f"{sid}: target needs agent_group")
+    unknown = sorted(set(target) - {"agent_group"})
+    if unknown:
+        raise ScenarioError(f"{sid}: unsupported target keys {unknown}; the transport is set by AEGIS_LINUX_EXECUTOR")
     _check_command(sid, "execute", data["execute"])
     for i, cmd in enumerate(data.get("prerequisites") or []):
         _check_command(sid, f"prerequisites[{i}]", cmd)
@@ -89,11 +119,6 @@ def load_scenarios(root: Path) -> dict[str, dict[str, Any]]:
     return scenarios
 
 
-def wsl_argv(distro: str, cmd: dict[str, Any]) -> list[str]:
-    user = ["-u", "root"] if cmd["run_as"] == "root" else []
-    return ["wsl", "-d", distro, *user, "--", *cmd["argv"]]
-
-
 @dataclass
 class ScenarioResult:
     scenario_id: str
@@ -101,6 +126,7 @@ class ScenarioResult:
     technique: str
     status: str
     reason: str
+    executor: str = ""
     started_at: str | None = None
     finished_at: str | None = None
     agent: dict[str, Any] = field(default_factory=dict)
@@ -181,10 +207,23 @@ class Clock:
     sleep: Callable[[float], None] = time.sleep
 
 
-def run_scenario(sc: dict[str, Any], api: WazuhApi, indexer: Indexer, run: Runner = subprocess.run,
+def verify_target_identity(executor: Executor, agent: dict[str, Any], run: Runner) -> str:
+    """Empty string if the executor reaches the endpoint whose alerts are evaluated; otherwise the reason it does not."""
+    proc = run(executor.argv(IDENTITY_COMMAND), capture_output=True, text=True, timeout=60)
+    if proc.returncode != 0:
+        hint = " (cache sudo credentials with `sudo -v` first)" if executor.spec == "local" else ""
+        return f"could not read the agent identity through executor {executor.spec!r}{hint}"
+    found = proc.stdout.split()
+    if found != [agent.get("id"), agent.get("name")]:
+        return (f"executor {executor.spec!r} reaches agent {' '.join(found) or 'unknown'}, "
+                f"but the target is {agent.get('id')} {agent.get('name')}")
+    return ""
+
+
+def run_scenario(sc: dict[str, Any], api: WazuhApi, indexer: Indexer, executor: Executor, run: Runner = subprocess.run,
                  clock: Clock = Clock(), poll_seconds: float = 5.0, log: Callable[[str], None] = print) -> ScenarioResult:
-    distro = sc["target"]["wsl_distro"]
-    result = ScenarioResult(sc["id"], sc["title"], sc["technique"], SKIPPED, "", expected=sc["expected"],
+    result = ScenarioResult(sc["id"], sc["title"], sc["technique"], SKIPPED, "", executor=executor.spec,
+                            expected=sc["expected"],
                             scenario_sha256=hashlib.sha256(Path(sc["_path"]).read_bytes()).hexdigest())
 
     agent, why = resolve_agent(api, sc["target"]["agent_group"])
@@ -193,8 +232,13 @@ def run_scenario(sc: dict[str, Any], api: WazuhApi, indexer: Indexer, run: Runne
         return result
     result.agent = {k: agent.get(k) for k in ("id", "name", "version")}
 
+    mismatch = verify_target_identity(executor, agent, run)
+    if mismatch:
+        result.reason = mismatch
+        return result
+
     for pre in sc.get("prerequisites") or []:
-        if run(wsl_argv(distro, pre), capture_output=True, text=True, timeout=60).returncode != 0:
+        if run(executor.argv(pre), capture_output=True, text=True, timeout=60).returncode != 0:
             result.reason = f"prerequisite failed: {pre.get('name', pre['argv'])}"
             return result
 
@@ -211,7 +255,7 @@ def run_scenario(sc: dict[str, Any], api: WazuhApi, indexer: Indexer, run: Runne
     start = clock.now()
     result.started_at = start.isoformat()
     try:
-        proc = run(wsl_argv(distro, sc["execute"]), capture_output=True, text=True, timeout=120)
+        proc = run(executor.argv(sc["execute"]), capture_output=True, text=True, timeout=120)
         result.execute_exit_code = proc.returncode
         deadline = start + timedelta(seconds=sc["timeout_seconds"])
         want = {str(r) for r in sc["expected"].get("detection_rules") or []}
@@ -235,9 +279,10 @@ def run_scenario(sc: dict[str, Any], api: WazuhApi, indexer: Indexer, run: Runne
             result.first_detection_latency_s = round((min(firsts) - start).total_seconds(), 3)
     finally:
         if sc.get("cleanup"):
-            ok = all(run(wsl_argv(distro, c), capture_output=True, text=True, timeout=60).returncode == 0 for c in sc["cleanup"])
-            verified = run(wsl_argv(distro, sc["verify_cleanup"]), capture_output=True, text=True, timeout=60).returncode == 0
-            result.cleanup = "verified" if ok and verified else "FAILED"
+            # Every step runs even if an earlier one failed, so a partial failure leaves as little behind as possible.
+            codes = [run(executor.argv(c), capture_output=True, text=True, timeout=60).returncode for c in sc["cleanup"]]
+            verified = run(executor.argv(sc["verify_cleanup"]), capture_output=True, text=True, timeout=60).returncode == 0
+            result.cleanup = "verified" if verified and not any(codes) else "FAILED"
             if result.cleanup == "FAILED":
                 result.reason = f"{result.status}: {result.reason}; cleanup failed - manual cleanup required"
                 result.status = CLEANUP_REQUIRED

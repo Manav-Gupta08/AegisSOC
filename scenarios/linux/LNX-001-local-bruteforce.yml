@@ -8,7 +8,6 @@ description: >
   attempts exceed rule 100100's threshold of six within 120 s.
 target:
   agent_group: linux
-  wsl_distro: Ubuntu
 prerequisites:
   - name: no PAM account lockout configured (attempts must not lock the user)
     run_as: root

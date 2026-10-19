@@ -131,20 +131,21 @@ def cmd_scenarios(args: argparse.Namespace) -> int:
         raise scenarios.ScenarioError("refusing to execute simulations without --authorize "
                                       "(confirms the targets are lab endpoints you own)")
     ctx = Context.load(root)
+    executor = scenarios.Executor.parse(ctx.env.get("AEGIS_LINUX_EXECUTOR") or scenarios.default_executor())
     api = provision.api_client(ctx)
     api.authenticate(provision.READER_API_USER, ctx.secret("WAZUH_API_READER_PASSWORD"))
     indexer = provision.indexer_client(ctx, provision.READER_INDEXER_USER, ctx.secret("INDEXER_READER_PASSWORD"))
 
     results = []
     for sid in ids:
-        print(f"running {sid} ...")
-        r = scenarios.run_scenario(loaded[sid], api, indexer)
+        print(f"running {sid} via {executor.spec} ...")
+        r = scenarios.run_scenario(loaded[sid], api, indexer, executor)
         lat = f" latency={r.first_detection_latency_s}s" if r.first_detection_latency_s is not None else ""
         print(f"  {r.status:<16} {sid}  {r.reason}{lat}  cleanup={r.cleanup}")
         results.append(r)
 
     git = detections.git_state(root)
-    env = {"wazuh_version": ctx.lock.wazuh_version, "git": git,
+    env = {"wazuh_version": ctx.lock.wazuh_version, "git": git, "executor": executor.spec,
            "rule_files": {p.name: detections.sha256(p) for p in detections.rule_files(root)}}
     record = scenarios.run_record(results, env)
     print(f"Summary: {record['summary']}")
