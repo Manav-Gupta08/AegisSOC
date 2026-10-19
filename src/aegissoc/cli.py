@@ -5,11 +5,12 @@ import json
 import subprocess
 import sys
 import time
+from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
 from . import (agentconfig, backup, case_cli, cases, coverage, deploy, detections, health, metrics, playbooks, preflight,
-               provision, scenarios, web)
+               provision, scenarios, telemetry, web)
 from .clients import ServiceError
 from .settings import Context, Paths, find_repo_root
 
@@ -84,6 +85,12 @@ def cmd_agent_config(args: argparse.Namespace) -> int:
         api = provision.api_client(ctx)
         api.authenticate("wazuh-wui", ctx.secret("WAZUH_API_WUI_PASSWORD"))
         agentconfig.apply_group_configs(api, configs)
+    elif args.action == "assign":
+        if not (args.agent and args.group):
+            raise agentconfig.AgentConfigError("assign needs --agent and --group")
+        ctx = Context.load(paths.root)
+        agent_id = agentconfig.assign_group(_admin_api(ctx), args.agent, args.group, {c.name for c in configs})
+        print(f"agent {args.agent} ({agent_id}) is in group {args.group}")
     return 0
 
 
@@ -161,6 +168,25 @@ def cmd_playbooks(_: argparse.Namespace) -> int:
         print(f"  {pb['id']}  rules={pb['applies_to_rules']}  actions={actions}  {pb['title']}")
     print(f"valid: {len(loaded)} playbook(s)")
     return 0
+
+
+def cmd_telemetry(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    sources = telemetry.load_sources(root)
+    if args.validate:
+        print(f"valid: {len(sources)} source(s): {', '.join(s['id'] for s in sources)}")
+        return 0
+    ctx = Context.load(root)
+    api = provision.api_client(ctx)
+    api.authenticate(provision.READER_API_USER, ctx.secret("WAZUH_API_READER_PASSWORD"))
+    indexer = provision.indexer_client(ctx, provision.READER_INDEXER_USER, ctx.secret("INDEXER_READER_PASSWORD"))
+    now = datetime.now(timezone.utc)
+    results = telemetry.check_sources(api, indexer, sources, now)
+    overall = _print_results(results)
+    report = {"schema_version": "1.0", "generated_at": now.isoformat(), "overall": overall,
+              "checks": [asdict(r) for r in results]}
+    print(f"Report: {detections.write_record(report, ctx.paths.reports_dir, 'telemetry')}")
+    return _EXIT[overall]
 
 
 def cmd_ui(args: argparse.Namespace) -> int:
@@ -286,8 +312,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="also verify upstream default credentials are rejected (performs failed logins; not for loops)")
     h.set_defaults(func=cmd_health)
 
-    a = sub.add_parser("agent-config", help="validate or apply centralized agent group configs")
-    a.add_argument("action", choices=["validate", "apply"])
+    a = sub.add_parser("agent-config", help="validate, apply, or assign centralized agent group configs")
+    a.add_argument("action", choices=["validate", "apply", "assign"])
+    a.add_argument("--agent", help="agent name (assign)")
+    a.add_argument("--group", help="additional group, e.g. network-sensor (assign)")
     a.set_defaults(func=cmd_agent_config)
 
     d = sub.add_parser("detections", help="validate (offline), test (logtest), or deploy custom rules")
@@ -305,6 +333,10 @@ def build_parser() -> argparse.ArgumentParser:
     pb = sub.add_parser("playbooks", help="validate and list response playbooks (offline)")
     pb.add_argument("action", choices=["validate", "list"])
     pb.set_defaults(func=cmd_playbooks)
+
+    tm = sub.add_parser("telemetry", help="check that each expected telemetry source delivered events recently")
+    tm.add_argument("--validate", action="store_true", help="only validate deployment/wazuh/telemetry-sources.yml (offline)")
+    tm.set_defaults(func=cmd_telemetry)
 
     ui = sub.add_parser("ui", help="read-only analyst web UI on 127.0.0.1 (token-protected)")
     ui.add_argument("--port", type=int, default=8765)

@@ -1,0 +1,15 @@
+<!--
+  AegisSOC network rules. Pipeline checks use IDs 100800-100899. Metadata: detections/metadata/<id>.yml
+  Built on the Wazuh Suricata ruleset (86600 decodes eve.json, 86601 matches event_type alert).
+-->
+<group name="aegissoc,network,">
+
+  <!-- 100800: proves sensor -> eve.json -> agent -> manager -> indexer works; triggered by scenario NET-001. -->
+  <rule id="100800" level="3">
+    <if_sid>86601</if_sid>
+    <field name="alert.signature_id">^2100498$</field>
+    <description>AegisSOC pipeline check: Suricata test signature 2100498 observed.</description>
+    <group>aegissoc_pipeline_check,suricata,</group>
+  </rule>
+
+</group>

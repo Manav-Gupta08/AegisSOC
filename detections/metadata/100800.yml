@@ -1,0 +1,39 @@
+id: 100800
+kind: pipeline_check
+title: Suricata test signature observed (network telemetry pipeline check)
+status: experimental
+level: 3
+rule_file: detections/wazuh/rules/aegissoc_network_rules.xml
+rationale: >
+  Built-in rule 86601 fires for every Suricata alert, so its presence cannot show that a specific, deliberate
+  test reached the indexer. This rule matches only ET Open signature 2100498 ("GPL ATTACK_RESPONSE id check
+  returned root"), which the harmless request in scenario NET-001 triggers. A PASS proves the path
+  Suricata -> eve.json -> Wazuh agent -> manager -> indexer works end to end. It detects no attack.
+telemetry:
+  - Suricata eve.json (event_type alert) collected by the Wazuh agent (group network-sensor agent.conf)
+mitre: []
+false_positives:
+  - Any HTTP response containing "uid=0(root)" matches signature 2100498, for example documentation pages.
+limitations:
+  - Only proves the pipeline for alerts; flow, DNS, HTTP, and TLS events are decoded but not indexed (level 0).
+  - The sensor sees only traffic of the interface it monitors; there is no SPAN or tap in this lab.
+  - Requires the ET Open ruleset (suricata-update); without it signature 2100498 does not exist.
+investigation:
+  - Expected during NET-001. Outside a scenario run, check which host fetched the matching response.
+tests:
+  logtest:
+    - name: eve.json alert for signature 2100498 matches the pipeline check
+      log_format: json
+      location: /var/log/suricata/eve.json
+      events:
+        - '{"timestamp":"2026-10-19T10:00:00.000000+0000","flow_id":1,"in_iface":"eth0","event_type":"alert","src_ip":"203.0.113.10","src_port":80,"dest_ip":"192.0.2.20","dest_port":50000,"proto":"TCP","alert":{"action":"allowed","gid":1,"signature_id":2100498,"rev":7,"signature":"GPL ATTACK_RESPONSE id check returned root","category":"Potentially Bad Traffic","severity":2}}'
+      expect_last: 100800
+    - name: other Suricata alerts do not match
+      log_format: json
+      location: /var/log/suricata/eve.json
+      events:
+        - '{"timestamp":"2026-10-19T10:00:00.000000+0000","flow_id":2,"in_iface":"eth0","event_type":"alert","src_ip":"203.0.113.10","src_port":80,"dest_ip":"192.0.2.20","dest_port":50001,"proto":"TCP","alert":{"action":"allowed","gid":1,"signature_id":2013028,"rev":7,"signature":"ET POLICY curl User-Agent Outbound","category":"Attempted Information Leak","severity":2}}'
+      expect_none: [100800]
+  e2e:
+    - name: scenario NET-001 on the network sensor
+      result: NOT VERIFIED (no network sensor deployed yet)

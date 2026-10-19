@@ -1,0 +1,31 @@
+# Telemetry sources AegisSOC expects, checked by `aegis telemetry`.
+# A source counts as seen when an alert with one of its rule groups arrived from an agent in its agent group.
+# Only alerts are indexed (archives are disabled), so a source that produced no alert-level event in the window
+# looks the same whether it is quiet or broken; max_silence_hours is chosen per source with that in mind.
+# Rule group names come from the Wazuh 4.14 ruleset. Windows and Suricata expectations are NOT VERIFIED live.
+sources:
+  - id: linux-fim
+    agent_group: linux
+    description: File integrity monitoring (syscheck)
+    rule_groups: [syscheck]
+    max_silence_hours: 24
+  - id: linux-auth
+    agent_group: linux
+    description: Authentication events (PAM, sudo)
+    rule_groups: [authentication_success, authentication_failed]
+    max_silence_hours: 168
+  - id: windows-security
+    agent_group: windows
+    description: Windows Security event log
+    rule_groups: [windows_security]
+    max_silence_hours: 24
+  - id: windows-sysmon
+    agent_group: windows
+    description: Sysmon operational log
+    rule_groups: [sysmon]
+    max_silence_hours: 168
+  - id: network-suricata
+    agent_group: network-sensor
+    description: Suricata alerts from eve.json
+    rule_groups: [suricata]
+    max_silence_hours: 168

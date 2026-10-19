@@ -64,6 +64,20 @@ def group_for_platform(platform: str | None) -> str | None:
     return "windows" if platform.lower() == "windows" else "linux"
 
 
+def assign_group(api: WazuhApi, agent_name: str, group: str, known_groups: set[str]) -> str:
+    """Add one agent to an additional group; returns the agent id. Agents keep their OS group."""
+    if group not in known_groups:
+        raise AgentConfigError(f"unknown group {group!r}; known: {sorted(known_groups)}")
+    matches = [a for a in api.affected_items("/agents", {"select": "id,name,group", "limit": 500})
+               if a.get("name") == agent_name and a.get("id") != "000"]
+    if len(matches) != 1:
+        raise AgentConfigError(f"expected exactly one agent named {agent_name!r}, found {len(matches)}")
+    agent = matches[0]
+    if group not in (agent.get("group") or []):
+        api.request("PUT", f"/agents/{agent['id']}/group/{group}")
+    return agent["id"]
+
+
 def apply_group_configs(api: WazuhApi, configs: list[GroupConfig], log: Callable[[str], None] = print) -> dict[str, Any]:
     existing = {g["name"] for g in api.affected_items("/groups", {"limit": 500})}
     names = {c.name for c in configs}

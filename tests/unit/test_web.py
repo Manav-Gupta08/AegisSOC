@@ -26,6 +26,9 @@ def repo(tmp_path):
         "generated_at": "2026-10-19T10:00:00+00:00", "overall": "WARNING",
         "checks": [{"name": "agents", "status": "WARNING", "detail": "agent <b>x</b> disconnected"}]}))
     (runtime / "health-broken.json").write_text("{not json")
+    (runtime / "telemetry-20261019T100500Z.json").write_text(json.dumps({
+        "generated_at": "2026-10-19T10:05:00+00:00", "overall": "WARNING",
+        "checks": [{"name": "windows-sysmon@<i>win</i>", "status": "WARNING", "detail": "no alert-level events"}]}))
     store = cases.CaseStore(tmp_path)
     c = cases.new_case("CASE-20261013-001", "Injected <img src=x onerror=alert(1)>", "high", "alice")
     record(c, "alice", "transition", {"to": "triage"})
@@ -56,6 +59,11 @@ def test_overview_reports_health_cases_and_unreadable_files(site):
     html = site.overview()
     assert "WARNING" in html and "health-broken.json" in html
     assert "Wazuh dashboard" in html
+
+
+def test_health_page_shows_latest_telemetry_report(site):
+    html = site.health()
+    assert "Telemetry sources" in html and "windows-sysmon@&lt;i&gt;win&lt;/i&gt;" in html
 
 
 def test_tampered_case_is_flagged_not_rendered(site):

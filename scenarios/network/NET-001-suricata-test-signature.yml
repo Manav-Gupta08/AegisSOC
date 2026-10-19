@@ -1,0 +1,27 @@
+id: NET-001
+title: Suricata test signature through the network pipeline
+technique: T1071.001
+platform: linux
+description: >
+  Fetches the public IDS test page http://testmynids.org/uid/index.html from the network sensor itself. The
+  response contains "uid=0(root)", which ET Open signature 2100498 flags. Pipeline check 100800 must reach the
+  indexer. The technique field records the traffic type (HTTP); it is not a claim of detecting that technique.
+target:
+  agent_group: network-sensor
+prerequisites:
+  - name: curl available
+    run_as: default
+    argv: ["sh", "-c", "command -v curl >/dev/null"]
+  - name: suricata running
+    run_as: default
+    argv: ["systemctl", "is-active", "--quiet", "suricata"]
+safety:
+  - One plain HTTP GET to a public page maintained for IDS testing; the response is discarded.
+  - Nothing on the endpoint changes; there is nothing to clean up.
+execute:
+  run_as: default
+  argv: ["curl", "-s", "-m", "15", "-o", "/dev/null", "http://testmynids.org/uid/index.html"]
+expected:
+  detection_rules: ["100800"]
+timeout_seconds: 90
+cleanup: []

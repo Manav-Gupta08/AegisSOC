@@ -173,7 +173,7 @@ class Site:
     def health(self) -> Html:
         reports, bad = self._reports("health-*.json", include_examples=False)
         if not reports:
-            return note("No health report yet (run `aegis health`).", error=True)
+            return join([note("No health report yet (run `aegis health`).", error=True), self._telemetry()])
         _, latest = reports[-1]
         parts = [tag("p", join(["Latest report ", latest.get("generated_at", ""), ": ", badge(latest.get("overall"))])),
                  table(["Check", "Status", "Detail"],
@@ -186,9 +186,22 @@ class Site:
                         [[r.get("generated_at"), badge(r.get("overall")),
                           fmt([c["name"] for c in r.get("checks", []) if c.get("status") != "PASS"])]
                          for _, r in reversed(reports)])]
+        parts.append(self._telemetry())
         if bad:
             parts.append(note(f"Unreadable report files skipped: {fmt(bad)}", error=True))
         return join(parts)
+
+    def _telemetry(self) -> Html:
+        reports, _ = self._reports("telemetry-*.json", include_examples=False)
+        if not reports:
+            return join([tag("h2", "Telemetry sources"), note("No telemetry report yet (run `aegis telemetry`).")])
+        _, latest = reports[-1]
+        return join([
+            tag("h2", "Telemetry sources"),
+            tag("p", f"Report {latest.get('generated_at')}. Only alert-level events are indexed, so a silent source "
+                     "may be quiet or broken."),
+            table(["Source@agent", "Status", "Detail"],
+                  [[c.get("name"), badge(c.get("status")), c.get("detail")] for c in latest.get("checks", [])])])
 
     def detections(self) -> Html:
         try:
