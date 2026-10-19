@@ -1,0 +1,27 @@
+id: LNX-004
+title: systemd unit file created and removed (never enabled)
+technique: T1543.002
+platform: linux
+description: >
+  Writes a oneshot unit running /bin/true to /etc/systemd/system without enabling or starting it, then removes it.
+target:
+  agent_group: linux
+  wsl_distro: Ubuntu
+prerequisites:
+  - name: unit does not already exist
+    run_as: root
+    argv: ["sh", "-c", "test ! -e /etc/systemd/system/aegis-scenario.service"]
+safety:
+  - The unit is never enabled or started; ExecStart is /bin/true.
+execute:
+  run_as: root
+  argv: ["sh", "-c", "printf '[Unit]\\nDescription=AegisSOC scenario LNX-004 (never enabled)\\n[Service]\\nType=oneshot\\nExecStart=/bin/true\\n' > /etc/systemd/system/aegis-scenario.service"]
+expected:
+  detection_rules: ["100201"]
+timeout_seconds: 60
+cleanup:
+  - run_as: root
+    argv: ["rm", "-f", "/etc/systemd/system/aegis-scenario.service"]
+verify_cleanup:
+  run_as: root
+  argv: ["sh", "-c", "test ! -e /etc/systemd/system/aegis-scenario.service"]

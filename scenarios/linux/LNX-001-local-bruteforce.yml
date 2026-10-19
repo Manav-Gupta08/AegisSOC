@@ -1,0 +1,29 @@
+id: LNX-001
+title: Repeated local sudo authentication failures
+technique: T1110.001
+platform: linux
+description: >
+  Seven sudo attempts with a deliberately wrong password from the default (non-root) user.
+  On this endpoint each attempt yields one indexed unix_chkpwd failure (M1-E2E-001), so seven
+  attempts exceed rule 100100's threshold of six within 120 s.
+target:
+  agent_group: linux
+  wsl_distro: Ubuntu
+prerequisites:
+  - name: no PAM account lockout configured (attempts must not lock the user)
+    run_as: root
+    argv: ["sh", "-c", "! grep -rqs pam_faillock /etc/pam.d/"]
+safety:
+  - Wrong password is a fixed literal; no real credentials are used.
+  - No state is changed on the endpoint; there is nothing to clean up.
+quiet_before:
+  seconds: 125
+  rule_groups: [authentication_failed]
+execute:
+  run_as: default
+  argv: ["sh", "-c", "for i in 1 2 3 4 5 6 7; do echo aegis-wrong-password | sudo -S -k true 2>/dev/null; done; exit 0"]
+expected:
+  telemetry_rules: ["5557"]
+  detection_rules: ["100100"]
+timeout_seconds: 90
+cleanup: []

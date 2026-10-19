@@ -1,0 +1,30 @@
+id: LNX-003
+title: sudoers drop-in created and removed
+technique: T1548.003
+platform: linux
+description: >
+  Creates a comment-only file in /etc/sudoers.d (validated by visudo, grants nothing), then removes it.
+target:
+  agent_group: linux
+  wsl_distro: Ubuntu
+prerequisites:
+  - name: visudo available
+    run_as: root
+    argv: ["sh", "-c", "command -v visudo >/dev/null"]
+  - name: test file does not already exist
+    run_as: root
+    argv: ["sh", "-c", "test ! -e /etc/sudoers.d/aegis-scenario"]
+safety:
+  - File content is a single comment line and is syntax-checked with visudo before the test continues.
+execute:
+  run_as: root
+  argv: ["sh", "-c", "printf '# AegisSOC scenario LNX-003 - safe to delete\\n' > /etc/sudoers.d/aegis-scenario && chmod 0440 /etc/sudoers.d/aegis-scenario && visudo -cf /etc/sudoers.d/aegis-scenario >/dev/null"]
+expected:
+  detection_rules: ["100200"]
+timeout_seconds: 60
+cleanup:
+  - run_as: root
+    argv: ["rm", "-f", "/etc/sudoers.d/aegis-scenario"]
+verify_cleanup:
+  run_as: root
+  argv: ["sh", "-c", "test ! -e /etc/sudoers.d/aegis-scenario"]

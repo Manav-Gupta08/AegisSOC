@@ -1,0 +1,29 @@
+id: LNX-002
+title: Single failed sudo authentication does not trigger brute-force correlation
+technique: T1110.001
+platform: linux
+description: >
+  Negative case for rule 100100: one wrong-password sudo attempt must produce the base
+  authentication-failure telemetry but must not be escalated to the correlation rule.
+target:
+  agent_group: linux
+  wsl_distro: Ubuntu
+prerequisites:
+  - name: no PAM account lockout configured
+    run_as: root
+    argv: ["sh", "-c", "! grep -rqs pam_faillock /etc/pam.d/"]
+safety:
+  - Wrong password is a fixed literal; no state is changed.
+quiet_before:
+  seconds: 125
+  rule_groups: [authentication_failed]
+execute:
+  run_as: default
+  argv: ["sh", "-c", "echo aegis-wrong-password | sudo -S -k true 2>/dev/null; exit 0"]
+expected:
+  telemetry_rules: ["5557"]
+  forbidden_rules: ["100100"]
+# Negative cases wait the full window: absence can only be judged after the correlation timeframe.
+timeout_seconds: 45
+observe_full_window: true
+cleanup: []

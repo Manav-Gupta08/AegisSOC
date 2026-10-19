@@ -1,0 +1,27 @@
+id: LNX-005
+title: Local group created and removed
+technique: T1098
+platform: linux
+description: >
+  Creates an empty local group (no members) and removes it, changing /etc/group and /etc/gshadow.
+target:
+  agent_group: linux
+  wsl_distro: Ubuntu
+prerequisites:
+  - name: group does not already exist
+    run_as: root
+    argv: ["sh", "-c", "! getent group aegis-scenario >/dev/null"]
+safety:
+  - The group has no members and grants nothing.
+execute:
+  run_as: root
+  argv: ["groupadd", "aegis-scenario"]
+expected:
+  detection_rules: ["100202"]
+timeout_seconds: 60
+cleanup:
+  - run_as: root
+    argv: ["groupdel", "aegis-scenario"]
+verify_cleanup:
+  run_as: root
+  argv: ["sh", "-c", "! getent group aegis-scenario >/dev/null"]
