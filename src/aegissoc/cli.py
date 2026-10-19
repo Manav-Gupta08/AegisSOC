@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import (agentconfig, backup, case_cli, cases, coverage, deploy, detections, health, metrics, playbooks, preflight,
-               provision, scenarios)
+               provision, scenarios, web)
 from .clients import ServiceError
 from .settings import Context, Paths, find_repo_root
 
@@ -163,6 +163,21 @@ def cmd_playbooks(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_ui(args: argparse.Namespace) -> int:
+    ctx = Context.load(require_env=False)
+    dashboard = f"https://127.0.0.1:{ctx.env['AEGIS_DASHBOARD_PORT']}"
+    server, url = web.create_server(ctx.paths.root, dashboard, args.port)
+    print(f"AegisSOC UI (read-only, this machine only): {url}")
+    print("The token in the URL grants access until the server stops. Press Ctrl+C to stop.", flush=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+    return 0
+
+
 def cmd_coverage(args: argparse.Namespace) -> int:
     root = find_repo_root()
     paths = Paths(root)
@@ -290,6 +305,10 @@ def build_parser() -> argparse.ArgumentParser:
     pb = sub.add_parser("playbooks", help="validate and list response playbooks (offline)")
     pb.add_argument("action", choices=["validate", "list"])
     pb.set_defaults(func=cmd_playbooks)
+
+    ui = sub.add_parser("ui", help="read-only analyst web UI on 127.0.0.1 (token-protected)")
+    ui.add_argument("--port", type=int, default=8765)
+    ui.set_defaults(func=cmd_ui)
 
     cv = sub.add_parser("coverage", help="generate the detection coverage matrix (Markdown + JSON)")
     cv.add_argument("--report", help="scenario report JSON (default: latest in reports/runtime)")
