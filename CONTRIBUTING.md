@@ -31,7 +31,8 @@ pytest
 
 Every custom rule change must include:
 
-1. Stable rule ID in the AegisSOC range (100000–100999). IDs are never reused.
+1. Stable rule ID in the AegisSOC range for its kind (detections 100000–100799, pipeline checks 100800–100899,
+   suppressions 100900–100999). IDs are never reused.
 2. Rationale, required telemetry, severity, and ATT&CK mapping where justified.
 3. Positive and negative test cases.
 4. False-positive considerations and known limitations.

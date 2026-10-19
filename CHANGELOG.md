@@ -48,8 +48,17 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - Read-only analyst web UI (`aegis ui`, standard library only): overview, system health, detections, validation
   history, coverage, cases, playbooks, and audit log. Loopback only, one-time token and strict cookie, `Host`
   check, restrictive CSP, all file content escaped.
+- Optional Suricata network sensor: `install-suricata.sh` (distribution package, ET Open, passive af-packet),
+  `network-sensor` agent group, pipeline check rule 100800, scenario NET-001. Zeek deliberately not added.
+- Rule kind `pipeline_check` (IDs 100800-100899): proves a telemetry path without claiming an ATT&CK technique.
+- `aegis telemetry`: per-source, per-agent check of expected telemetry (`deployment/wazuh/telemetry-sources.yml`);
+  shown on the UI health page.
+- `aegis agent-config assign --agent <name> --group <group>` for optional groups.
+- CI lints shell scripts (`bash -n`, shellcheck) and parses every PowerShell script.
 
 ### Changed
+- Windows agent installer restricts `authd.pass` before writing the password, explains `Invalid group` failures,
+  and checks that the service runs; documented enrollment order (groups first).
 - Scenario manifests no longer name a WSL distro; the transport is a host setting.
 - Documentation covers Windows and Linux hosts; tooling is installed in a virtual environment outside the repository.
 

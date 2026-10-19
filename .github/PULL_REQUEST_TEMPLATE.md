@@ -27,7 +27,7 @@
 
 ## Detection changes only
 
-- [ ] Rule ID in 100000–100999 and not reused
+- [ ] Rule ID in the range for its kind (100000–100799 / 100800–100899 / 100900–100999) and not reused
 - [ ] Rationale, telemetry, severity, ATT&CK mapping documented
 - [ ] Positive and negative tests added
 - [ ] False positives and limitations documented

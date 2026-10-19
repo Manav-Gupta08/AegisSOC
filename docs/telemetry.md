@@ -46,12 +46,73 @@ yet, so audit events are not collected (NOT IMPLEMENTED). The statuses above wer
 | Defender Operational | Detections, tamper events | AV signal | Low | EICAR-free: check event channel exists | Third-party AV replaces it | NOT VERIFIED |
 | FIM real-time | Startup folder, `System32\Tasks` | Persistence | Low | Create test file | Per-user startup folders not covered | NOT VERIFIED |
 
-Setup (elevated PowerShell): `install-sysmon.ps1`, then `install-wazuh-agent.ps1`, then `aegis agent-config apply`.
+Setup: see [Enrolling the Windows endpoint](#enrolling-the-windows-endpoint).
 
 Sysmon disabled event types for volume on Profile A: ImageLoad (7), DNS (22), FileDelete (23/26), Pipes (17/18).
+
+### Enrolling the Windows endpoint
+
+The first attempt (2026-10-13) failed because a wrong enrollment password was entered; the installer now
+re-prompts. Order matters: the installer enrolls the agent directly into the `windows` group, and the manager
+rejects enrollment into a group that does not exist yet.
+
+1. Stack host: `aegis agent-config apply` (creates the `linux`, `windows`, and `network-sensor` groups).
+2. If the stack runs on another machine (for example a Linux host), set `AEGIS_AGENT_BIND` to its lab-network
+   address, restart the stack (`aegis up`), and allow only the Windows endpoint to reach 1514-1515/tcp, for
+   example `sudo ufw allow from <windows-ip> to any port 1514:1515 proto tcp`. Never use `0.0.0.0`.
+3. Windows endpoint, elevated PowerShell in `deployment\endpoints\windows`:
+
+   ```powershell
+   .\install-sysmon.ps1
+   .\install-wazuh-agent.ps1 -Manager <stack address>   # prompts for WAZUH_ENROLLMENT_PASSWORD
+   ```
+
+   Both installers verify Authenticode signatures and write a transcript to `%ProgramData%\AegisSOC\logs`.
+4. Stack host: `aegis health` (the `agents` check must list the Windows agent as active and synced), then
+   produce a known event, a failed logon with `runas /user:aegis-nonexistent cmd` and a wrong password, and run
+   `aegis telemetry`. Expected: rule 60122 for the failed logon, `windows-security@<agent>` PASS.
+   `windows-sysmon` passes only once a Sysmon event reaches alert level; until then it is a WARNING.
+
+Record the outcome in this table before changing any status to PASS.
+
+## Network sensor (optional, Profile B, group `network-sensor`)
+
+| Source | Collects | Why | Est. volume | Validate | Blind spots | Status |
+|---|---|---|---|---|---|---|
+| Suricata (IDS mode, af-packet, ET Open) | `eve.json` alerts plus flow, DNS, HTTP, TLS metadata | Network-level signatures independent of endpoint agents | Alerts low; metadata high but decoded at level 0 and not indexed | Scenario NET-001 → pipeline check 100800 | Sees only the monitored interface's traffic (no SPAN/tap); encrypted payloads; signature-based only | NOT VERIFIED |
+
+Setup on a Linux agent with a network interface worth watching (a Linux host's own uplink, or a VM bridged to a
+mirror port):
+
+```sh
+sudo deployment/endpoints/linux/install-suricata.sh --interface <iface>
+aegis agent-config apply
+aegis agent-config assign --agent <agent name> --group network-sensor
+aegis scenarios run NET-001 --authorize
+```
+
+The installer uses the distribution's Suricata package, pins the interface with a systemd drop-in instead of
+editing `suricata.yaml`, loads ET Open with `suricata-update`, and refuses to finish unless `suricata -T` passes,
+signature 2100498 is loaded, and `eve.json` is being written. Suricata runs passively (no inline blocking).
+
+On a Windows host, Suricata inside WSL2 would only see the VM's own traffic, so the sensor is not offered there.
+
+**Zeek: not added.** Suricata's `eve.json` already provides flow, DNS, HTTP, and TLS metadata for investigation, and
+Zeek would add a second sensor process, a second log format, and its own decoders without a monitored segment
+that justifies it. Reconsider when a SPAN/tap or a multi-host lab segment exists and protocol logs beyond
+Suricata's (for example SMB, Kerberos, or long-term connection baselining) are needed.
+
+## Per-source checks (`aegis telemetry`)
+
+`deployment/wazuh/telemetry-sources.yml` lists the expected sources by agent group and rule group. For every agent
+in a source's group, `aegis telemetry` reports PASS when an alert from that source arrived within the source's
+`max_silence_hours`, WARNING when none did or the agent is not active, and NOT_VERIFIED when no agent is in the
+group (the source is not deployed). It uses the read-only accounts and writes a JSON report that `aegis ui` shows.
+`aegis telemetry --validate` checks the file offline and runs in CI.
 
 ## Missing telemetry vs. quiet environment
 
 - Agent stopped/disconnected → `agents` check WARNING. Absence of alerts is never treated as "no activity".
 - Only *alerts* are indexed (archives disabled to bound storage). A source that produces no alert-level events
-  cannot be distinguished from a silent source by the indexer alone; source-level heartbeat checks are planned.
+  cannot be distinguished from a silent source by the indexer alone. `aegis telemetry` makes that visible per
+  source and agent but cannot resolve it; a true heartbeat would need archives or a source-side canary.

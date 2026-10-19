@@ -57,7 +57,10 @@ Status of each safeguard uses PASS / NOT VERIFIED / NOT IMPLEMENTED.
   `unix_chkpwd` rule (5557) fired. Rule 100100 correlates these generic failures by user, but sudo-specific
   context (command, tty) is still not decoded. LNX-001/002 expect 5557 and must be re-baselined on endpoints
   with classic sudo, where they report INCONCLUSIVE rather than a false result.
-- **No network visibility**: there is no SPAN/tap; network detections are out of scope for Profile A.
+- **No network visibility**: there is no SPAN/tap. The optional Suricata sensor sees only the traffic of the
+  interface it monitors (normally its own host), so network detections cover that host, not the lab segment.
+  Suricata `eve.json` fields such as HTTP hosts and URLs are attacker-controlled text and are escaped like all
+  other alert content.
 - **Container image trust**: images are pinned by digest recorded on first use; the digest was not independently
   verified against a vendor-published value.
 - **Docker Desktop bind mounts** expose files with permissive modes inside containers; private keys on

@@ -17,7 +17,14 @@ flowchart LR
    lines (logtest). Custom rules must add value, e.g. correlation or severity on sensitive paths.
 2. **Write the rule and its metadata together.** `detections/wazuh/rules/aegissoc_<area>_rules.xml` and
    `detections/metadata/<id>.yml` (rationale, telemetry, ATT&CK, false positives, limitations,
-   investigation, tests). Rule IDs: 100000–100999, never reused.
+   investigation, tests). Rule IDs: 100000–100999, never reused, by kind:
+
+   | Kind | IDs | Purpose | Constraints |
+   |---|---|---|---|
+   | `detection` (default) | 100000–100799 | Detect attacker behavior | At least one ATT&CK mapping; level ≥ 1 |
+   | `pipeline_check` | 100800–100899 | Prove a telemetry path works end to end | No ATT&CK mapping; level 1–5; excluded from coverage |
+   | `suppression` | 100900–100999 | Silence verified false positives | Level 0; evidence and compensating controls documented |
+
 3. **Validate offline** (`aegis detections validate`, also in CI): well-formed XML, ID range and uniqueness,
    metadata completeness, level consistency, ATT&CK ID format, at least one test, and known pitfalls
    (e.g. `<same_field>` on static fields).

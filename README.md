@@ -20,7 +20,7 @@ Every capability is tracked with one of: **PASS** (verified with evidence), **WA
 | Health checks | PASS | 8 checks plus an opt-in default-credential probe; 9/9 PASS live with one active agent (2026-10-13, 2026-10-14) |
 | Milestone 1 end-to-end detection | PASS | Real failed auth on WSL endpoint → rule 5557 alert in 0.6 s; see `reports/examples/M1-E2E-001-linux-auth-failure.json` |
 | Linux endpoint (WSL2 Ubuntu agent) | PASS (FIM realtime, journald) | FIM add/delete alerts in <1 s (M2-LNX-001). auditd NOT AVAILABLE on WSL2 (kernel audit inaccessible) |
-| Windows endpoint (Sysmon + agent) | FAIL | Agent installed but enrollment rejected (wrong password entered); Sysmon not installed. Installer fixed to re-prompt |
+| Windows endpoint (Sysmon + agent) | FAIL | First enrollment rejected (wrong password entered); Sysmon not installed. Installer now re-prompts, restricts `authd.pass` before writing it, and explains group errors; enrollment procedure in `docs/telemetry.md`. Needs a run on the Windows machine |
 | Custom detections (Linux) | PASS | 4 rules (100100, 100200–100202): logtest positive+negative and real-event e2e; see `docs/detection-methodology.md`, M2-LNX-002 |
 | Detection-as-code tooling | PASS | `aegis detections validate` (CI), `deploy` (manual, recorded), `test` (Wazuh logtest) |
 | Custom detections (Windows) | NOT IMPLEMENTED | Blocked on Windows telemetry |
@@ -36,7 +36,8 @@ Every capability is tracked with one of: **PASS** (verified with evidence), **WA
 | Linux host (Docker Engine) | NOT VERIFIED | Tooling supports it (host kernel `vm.max_map_count`, local scenario executor, owner-only secret files); unit-tested only, no live deployment yet |
 | Response playbooks | PASS (offline) | 3 reviewed playbooks; case actions are proposed, approved by a second analyst, and executed **in simulation only**, all in the hash-chained audit trail. Real execution is not implemented by design |
 | AegisSOC web UI | PASS (offline) | `aegis ui`: read-only pages for overview, system health, detections, validation, coverage, cases (timeline, evidence, response actions), playbooks, and audit log; token-protected, 127.0.0.1 only. Alerts stay in the Wazuh dashboard. Exercised against the lab's real files; not yet used next to a running stack on Linux |
-| Network IDS (Suricata) | NOT IMPLEMENTED | Optional, Profile B |
+| Network IDS (Suricata) | NOT VERIFIED | Optional Profile B sensor on a Linux agent: installer, `network-sensor` group, pipeline check 100800, scenario NET-001; not yet deployed. Zeek deliberately not added (see `docs/telemetry.md`) |
+| Per-source telemetry checks | NOT VERIFIED | `aegis telemetry` reports each expected source per agent (PASS / silent / not deployed); unit-tested, not yet run live |
 
 ## Architecture (Profile A, lightweight)
 

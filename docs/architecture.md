@@ -61,7 +61,7 @@ needs a separate machine or VM.
 | Windows endpoint | The Windows host itself, passive telemetry only | Only practical Windows endpoint within 16 GB; simulations limited to benign, reversible, approved tests |
 | TLS verification | Always on; tooling pins the stack root CA and asserts the expected service hostname | Never disable verification to make a connection work |
 | Tooling accounts | Dedicated read-only indexer user and Wazuh API user | Least privilege; admin credentials used only during provisioning |
-| Network IDS | Deferred (Profile B) | Host has no span/tap visibility; Suricata on WSL would only see the VM's own traffic |
+| Network IDS | Suricata, optional, on a Linux agent (group `network-sensor`, Profile B); Zeek not added | No span/tap in the lab, so a sensor sees only its own interface; on Windows hosts Suricata in WSL would see only the VM. Suricata's eve.json metadata covers investigation needs that Zeek would otherwise add |
 
 ## Data flow and trust boundaries
 

@@ -128,8 +128,11 @@ aegis health
 
 ### Endpoints
 
+Run `aegis agent-config apply` first: it creates the agent groups, and the Windows installer enrolls directly into
+the `windows` group.
+
 - Windows host: run `deployment/endpoints/linux/install-wazuh-agent.sh` inside WSL Ubuntu, and the Windows
-  installers described in [telemetry.md](telemetry.md).
+  installers as described in [telemetry.md](telemetry.md#enrolling-the-windows-endpoint).
 - Linux host (the host is the endpoint):
 
   ```sh
@@ -137,7 +140,12 @@ aegis health
   sudo deployment/endpoints/linux/configure-auditd.sh
   ```
 
-Then assign agents to their groups with `aegis agent-config apply` and confirm with `aegis health`.
+  A Windows endpoint on another machine reaches a Linux host through `AEGIS_AGENT_BIND` and a firewall rule; see
+  the same telemetry section.
+- Optional network sensor (Linux agents only): [telemetry.md](telemetry.md#network-sensor-optional-profile-b-group-network-sensor).
+
+Run `aegis agent-config apply` again after enrolling so Linux agents join the `linux` group, then confirm with
+`aegis health` and `aegis telemetry`.
 
 ### What `aegis prepare` does
 
