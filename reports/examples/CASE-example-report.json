@@ -1,0 +1,394 @@
+{
+  "schema_version": "1.0",
+  "status": "closed",
+  "classification": "test_activity",
+  "confidence": "high",
+  "affected_endpoints": [
+    "[REDACTED]"
+  ],
+  "source_alerts": [
+    {
+      "alert_id": "K4V8OKEBfRk-9w7OPNM_",
+      "index": "wazuh-alerts-4.x-2026.10.14",
+      "timestamp": "2026-10-14T03:37:02.642+0000",
+      "rule_id": "100200",
+      "rule_level": 10,
+      "rule_description": "AegisSOC: sudoers configuration changed (/etc/sudoers.d/aegis-scenario).",
+      "mitre": [
+        "T1548.003"
+      ],
+      "agent": "[REDACTED]"
+    },
+    {
+      "alert_id": "LIV8OKEBfRk-9w7OPNM_",
+      "index": "wazuh-alerts-4.x-2026.10.14",
+      "timestamp": "2026-10-14T03:37:02.654+0000",
+      "rule_id": "100200",
+      "rule_level": 10,
+      "rule_description": "AegisSOC: sudoers configuration changed (/etc/sudoers.d/aegis-scenario).",
+      "mitre": [
+        "T1548.003"
+      ],
+      "agent": "[REDACTED]"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "EV-001",
+      "kind": "alert",
+      "reference": "CASE-20261014-001/evidence/EV-001.json",
+      "sha256": "0a18e972c0a97c00198fffdaaa78d751723de947c23d72b64c694f394dfda0f7",
+      "collected_at": "2026-10-14T03:37:55.419461+00:00",
+      "description": "raw alert K4V8OKEBfRk-9w7OPNM_ from wazuh-alerts-4.x-2026.10.14"
+    },
+    {
+      "evidence_id": "EV-002",
+      "kind": "alert",
+      "reference": "CASE-20261014-001/evidence/EV-002.json",
+      "sha256": "37359e87a1b2c2899a09f18c4584e31ee83e4add2fee8b8cc8c3b5c75870d395",
+      "collected_at": "2026-10-14T03:37:55.423163+00:00",
+      "description": "raw alert LIV8OKEBfRk-9w7OPNM_ from wazuh-alerts-4.x-2026.10.14"
+    }
+  ],
+  "notes": [
+    {
+      "at": "2026-10-14T03:38:04.811649+00:00",
+      "author": "analyst",
+      "text": "File created and deleted within ~0.3 s; content not retained after delete. No actor attribution available (WSL2 realtime FIM)."
+    },
+    {
+      "at": "2026-10-14T03:38:08.404732+00:00",
+      "author": "analyst",
+      "text": "Correlated with scenario run LNX-003 (authorized, --authorize) started 03:37:02Z; cleanup verified by runner."
+    },
+    {
+      "at": "2026-10-14T03:46:12.775007+00:00",
+      "author": "analyst",
+      "text": "Post-closure note: audit shows set operations recorded before transitions because CLI calls were interleaved; concurrency guard added."
+    }
+  ],
+  "recommendations": [
+    "Confirm with the change owner before treating any future sudoers change as benign.",
+    "If unexplained: review /etc/sudoers.d contents, recent logins, and package installs; consider disabling the account involved (manual, approved action)."
+  ],
+  "audit": [
+    {
+      "seq": 1,
+      "at": "2026-10-14T03:37:35.701848+00:00",
+      "actor": "analyst",
+      "action": "created",
+      "detail": {
+        "case_id": "CASE-20261014-001",
+        "title": "sudoers drop-in created and removed on Linux endpoint",
+        "severity": "high"
+      },
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "hash": "c7e539b0e912f9d0936b9029061112cd66d267d8ab1548ee85e2776750cb3b4a"
+    },
+    {
+      "seq": 2,
+      "at": "2026-10-14T03:37:44.445860+00:00",
+      "actor": "analyst",
+      "action": "transition",
+      "detail": {
+        "from": "new",
+        "to": "triage",
+        "reason": "rule 100200 level 10"
+      },
+      "prev_hash": "c7e539b0e912f9d0936b9029061112cd66d267d8ab1548ee85e2776750cb3b4a",
+      "hash": "86356e273e8a0e876b70fd6e7403e4f6fd76c7bfa08e744e213c072a5d5c7862"
+    },
+    {
+      "seq": 3,
+      "at": "2026-10-14T03:37:55.415767+00:00",
+      "actor": "analyst",
+      "action": "add_alert",
+      "detail": {
+        "alert": {
+          "alert_id": "K4V8OKEBfRk-9w7OPNM_",
+          "index": "wazuh-alerts-4.x-2026.10.14",
+          "timestamp": "2026-10-14T03:37:02.642+0000",
+          "rule_id": "100200",
+          "rule_level": 10,
+          "rule_description": "AegisSOC: sudoers configuration changed (/etc/sudoers.d/aegis-scenario).",
+          "mitre": [
+            "T1548.003"
+          ],
+          "agent": "[REDACTED]"
+        }
+      },
+      "prev_hash": "86356e273e8a0e876b70fd6e7403e4f6fd76c7bfa08e744e213c072a5d5c7862",
+      "hash": "87f157888a44406d4daa897b5870ebe06ee2bc6a17cff954806b2068da3d4364"
+    },
+    {
+      "seq": 4,
+      "at": "2026-10-14T03:37:55.419461+00:00",
+      "actor": "analyst",
+      "action": "add_evidence",
+      "detail": {
+        "evidence": {
+          "evidence_id": "EV-001",
+          "kind": "alert",
+          "reference": "CASE-20261014-001/evidence/EV-001.json",
+          "sha256": "0a18e972c0a97c00198fffdaaa78d751723de947c23d72b64c694f394dfda0f7",
+          "collected_at": "2026-10-14T03:37:55.419461+00:00",
+          "description": "raw alert K4V8OKEBfRk-9w7OPNM_ from wazuh-alerts-4.x-2026.10.14"
+        }
+      },
+      "prev_hash": "87f157888a44406d4daa897b5870ebe06ee2bc6a17cff954806b2068da3d4364",
+      "hash": "e3f8b7a29e523596a2d377cf38851fa5a1ecb970e3a131e388b79518152ef454"
+    },
+    {
+      "seq": 5,
+      "at": "2026-10-14T03:37:55.420148+00:00",
+      "actor": "analyst",
+      "action": "add_alert",
+      "detail": {
+        "alert": {
+          "alert_id": "LIV8OKEBfRk-9w7OPNM_",
+          "index": "wazuh-alerts-4.x-2026.10.14",
+          "timestamp": "2026-10-14T03:37:02.654+0000",
+          "rule_id": "100200",
+          "rule_level": 10,
+          "rule_description": "AegisSOC: sudoers configuration changed (/etc/sudoers.d/aegis-scenario).",
+          "mitre": [
+            "T1548.003"
+          ],
+          "agent": "[REDACTED]"
+        }
+      },
+      "prev_hash": "e3f8b7a29e523596a2d377cf38851fa5a1ecb970e3a131e388b79518152ef454",
+      "hash": "b998e080581d43668dfc5af5bc3b2cfb98c09b05ceec5e74af2efafb6052817b"
+    },
+    {
+      "seq": 6,
+      "at": "2026-10-14T03:37:55.423163+00:00",
+      "actor": "analyst",
+      "action": "add_evidence",
+      "detail": {
+        "evidence": {
+          "evidence_id": "EV-002",
+          "kind": "alert",
+          "reference": "CASE-20261014-001/evidence/EV-002.json",
+          "sha256": "37359e87a1b2c2899a09f18c4584e31ee83e4add2fee8b8cc8c3b5c75870d395",
+          "collected_at": "2026-10-14T03:37:55.423163+00:00",
+          "description": "raw alert LIV8OKEBfRk-9w7OPNM_ from wazuh-alerts-4.x-2026.10.14"
+        }
+      },
+      "prev_hash": "b998e080581d43668dfc5af5bc3b2cfb98c09b05ceec5e74af2efafb6052817b",
+      "hash": "f34065b7c07b5cbb521439bcb7660e400a968678a56280af82e53671e676d53a"
+    },
+    {
+      "seq": 7,
+      "at": "2026-10-14T03:38:04.811649+00:00",
+      "actor": "analyst",
+      "action": "note",
+      "detail": {
+        "text": "File created and deleted within ~0.3 s; content not retained after delete. No actor attribution available (WSL2 realtime FIM)."
+      },
+      "prev_hash": "f34065b7c07b5cbb521439bcb7660e400a968678a56280af82e53671e676d53a",
+      "hash": "585ce5cc331f817980be506d273346733dbfeab074e149c4ae02baf32856ffc8"
+    },
+    {
+      "seq": 8,
+      "at": "2026-10-14T03:38:08.404732+00:00",
+      "actor": "analyst",
+      "action": "note",
+      "detail": {
+        "text": "Correlated with scenario run LNX-003 (authorized, --authorize) started 03:37:02Z; cleanup verified by runner."
+      },
+      "prev_hash": "585ce5cc331f817980be506d273346733dbfeab074e149c4ae02baf32856ffc8",
+      "hash": "7426ae0345daff446f18b9825aa2a030cb931da3d4c539e82ca50e34491bc449"
+    },
+    {
+      "seq": 9,
+      "at": "2026-10-14T03:38:13.890700+00:00",
+      "actor": "analyst",
+      "action": "set",
+      "detail": {
+        "field": "confidence",
+        "value": "high"
+      },
+      "prev_hash": "7426ae0345daff446f18b9825aa2a030cb931da3d4c539e82ca50e34491bc449",
+      "hash": "8e4d944868b6bb23d02b586e1991dfd4b4a0366e20b2f2fa7bed77cbe637cae1"
+    },
+    {
+      "seq": 10,
+      "at": "2026-10-14T03:38:17.779535+00:00",
+      "actor": "analyst",
+      "action": "recommend",
+      "detail": {
+        "text": "Confirm with the change owner before treating any future sudoers change as benign."
+      },
+      "prev_hash": "8e4d944868b6bb23d02b586e1991dfd4b4a0366e20b2f2fa7bed77cbe637cae1",
+      "hash": "0226a40f77f1b6636c270e58fcad6567e22fd44e5f970e247c434a53e07a00bf"
+    },
+    {
+      "seq": 11,
+      "at": "2026-10-14T03:38:21.993920+00:00",
+      "actor": "analyst",
+      "action": "recommend",
+      "detail": {
+        "text": "If unexplained: review /etc/sudoers.d contents, recent logins, and package installs; consider disabling the account involved (manual, approved action)."
+      },
+      "prev_hash": "0226a40f77f1b6636c270e58fcad6567e22fd44e5f970e247c434a53e07a00bf",
+      "hash": "d6baffa53d3de25a3cde5c2b8a4f9ddec6370bb55b2e821bbd9c356189641fc3"
+    },
+    {
+      "seq": 12,
+      "at": "2026-10-14T03:38:28.931734+00:00",
+      "actor": "analyst",
+      "action": "set",
+      "detail": {
+        "field": "classification",
+        "value": "test_activity"
+      },
+      "prev_hash": "d6baffa53d3de25a3cde5c2b8a4f9ddec6370bb55b2e821bbd9c356189641fc3",
+      "hash": "33819b3b7d6b1d63fce38e5afa23e0aa93a415e26e8eb069949447801eac9efa"
+    },
+    {
+      "seq": 13,
+      "at": "2026-10-14T03:38:32.877238+00:00",
+      "actor": "analyst",
+      "action": "set",
+      "detail": {
+        "field": "findings",
+        "value": "Alerts were produced by authorized validation scenario LNX-003; the drop-in contained only a comment and was removed."
+      },
+      "prev_hash": "33819b3b7d6b1d63fce38e5afa23e0aa93a415e26e8eb069949447801eac9efa",
+      "hash": "7665294b44fbe4adc19b4fbac054a82abbc03a462bafb0ac0e366aae6d59597b"
+    },
+    {
+      "seq": 14,
+      "at": "2026-10-14T03:38:37.469817+00:00",
+      "actor": "analyst",
+      "action": "set",
+      "detail": {
+        "field": "closure_reason",
+        "value": "Authorized detection test; no malicious activity."
+      },
+      "prev_hash": "7665294b44fbe4adc19b4fbac054a82abbc03a462bafb0ac0e366aae6d59597b",
+      "hash": "de1e1c0782a06cb7d3f652f2092b3242eb1fcb61e6b3e04d59e85a17ff3c7907"
+    },
+    {
+      "seq": 15,
+      "at": "2026-10-14T03:38:40.505309+00:00",
+      "actor": "analyst",
+      "action": "set",
+      "detail": {
+        "field": "lessons_learned",
+        "value": "Detection fired in under 1 s; investigation lacked actor attribution - a VM endpoint with auditd would close this gap."
+      },
+      "prev_hash": "de1e1c0782a06cb7d3f652f2092b3242eb1fcb61e6b3e04d59e85a17ff3c7907",
+      "hash": "3614e3534c2c472226c7f60b529aed7d17b0662fedab7335c30e3fdf281fd26a"
+    },
+    {
+      "seq": 16,
+      "at": "2026-10-14T03:38:46.474606+00:00",
+      "actor": "analyst",
+      "action": "set",
+      "detail": {
+        "field": "severity",
+        "value": "low"
+      },
+      "prev_hash": "3614e3534c2c472226c7f60b529aed7d17b0662fedab7335c30e3fdf281fd26a",
+      "hash": "3d41952c4b6f80fba7ee36fb8c65165c9620684a48d4971a423ac00256ff40c9"
+    },
+    {
+      "seq": 17,
+      "at": "2026-10-14T03:38:50.155398+00:00",
+      "actor": "analyst",
+      "action": "correction",
+      "detail": {
+        "field": "severity",
+        "value": "low",
+        "reason": "test activity; severity reduced after classification"
+      },
+      "prev_hash": "3d41952c4b6f80fba7ee36fb8c65165c9620684a48d4971a423ac00256ff40c9",
+      "hash": "ae5e6d3513cf0e61d67164be8c73a7e17ff363570b1f48d37da47d4c0587577f"
+    },
+    {
+      "seq": 18,
+      "at": "2026-10-14T03:45:37.755896+00:00",
+      "actor": "analyst",
+      "action": "transition",
+      "detail": {
+        "from": "triage",
+        "to": "investigating",
+        "reason": "two sudoers FIM alerts 12 ms apart"
+      },
+      "prev_hash": "ae5e6d3513cf0e61d67164be8c73a7e17ff363570b1f48d37da47d4c0587577f",
+      "hash": "1cd52733bb396715a65329ad8f923a83ac107a18458b19fa1d30257bb1eb5433"
+    },
+    {
+      "seq": 19,
+      "at": "2026-10-14T03:45:41.023935+00:00",
+      "actor": "analyst",
+      "action": "transition",
+      "detail": {
+        "from": "investigating",
+        "to": "containment_recommended",
+        "reason": "recommendations recorded; no automated action taken"
+      },
+      "prev_hash": "1cd52733bb396715a65329ad8f923a83ac107a18458b19fa1d30257bb1eb5433",
+      "hash": "6355c571b2a71e303cfa8e57288ddeee79b0a2ff8108802cd726de3280d4f3c2"
+    },
+    {
+      "seq": 20,
+      "at": "2026-10-14T03:45:44.301847+00:00",
+      "actor": "analyst",
+      "action": "transition",
+      "detail": {
+        "from": "containment_recommended",
+        "to": "resolved",
+        "reason": ""
+      },
+      "prev_hash": "6355c571b2a71e303cfa8e57288ddeee79b0a2ff8108802cd726de3280d4f3c2",
+      "hash": "40b59a001341ef61af5791cc97d8aa457587ee52101eb2c8d9b1102302da1a9f"
+    },
+    {
+      "seq": 21,
+      "at": "2026-10-14T03:45:48.732199+00:00",
+      "actor": "analyst",
+      "action": "transition",
+      "detail": {
+        "from": "resolved",
+        "to": "closed",
+        "reason": ""
+      },
+      "prev_hash": "40b59a001341ef61af5791cc97d8aa457587ee52101eb2c8d9b1102302da1a9f",
+      "hash": "07e4d058e12492a93082eec8be77b90becf0513cccc2b7a5842ee329f861e5cf"
+    },
+    {
+      "seq": 22,
+      "at": "2026-10-14T03:46:12.775007+00:00",
+      "actor": "analyst",
+      "action": "note",
+      "detail": {
+        "text": "Post-closure note: audit shows set operations recorded before transitions because CLI calls were interleaved; concurrency guard added."
+      },
+      "prev_hash": "07e4d058e12492a93082eec8be77b90becf0513cccc2b7a5842ee329f861e5cf",
+      "hash": "7d4ab264dc0641470915a303d5a4b7b089ad3062b0215fc2d60a87825f4019d9"
+    },
+    {
+      "seq": 23,
+      "at": "2026-10-14T03:46:18.058229+00:00",
+      "actor": "analyst",
+      "action": "correction",
+      "detail": {
+        "field": "findings",
+        "value": "Alerts were produced by authorized validation scenario LNX-003 (2 alerts: add + delete); the drop-in contained only a comment and was removed.",
+        "reason": "added alert count"
+      },
+      "prev_hash": "7d4ab264dc0641470915a303d5a4b7b089ad3062b0215fc2d60a87825f4019d9",
+      "hash": "706e57dafd88ce9c38eeb20cee0ed9a1f70537eb16e9e7a69085a8b4a775e3f8"
+    }
+  ],
+  "case_id": "CASE-20261014-001",
+  "title": "sudoers drop-in created and removed on Linux endpoint",
+  "severity": "low",
+  "created_at": "2026-10-14T03:37:35.701848+00:00",
+  "findings": "Alerts were produced by authorized validation scenario LNX-003 (2 alerts: add + delete); the drop-in contained only a comment and was removed.",
+  "closure_reason": "Authorized detection test; no malicious activity.",
+  "lessons_learned": "Detection fired in under 1 s; investigation lacked actor attribution - a VM endpoint with auditd would close this gap."
+}
