@@ -172,7 +172,9 @@ def _guard(name: str, fn: Callable[[], CheckResult]) -> CheckResult:
         return CheckResult(name, FAIL, f"{type(exc).__name__}: {exc}", {})
 
 
-def run_health(ctx: Context, run: Callable[..., subprocess.CompletedProcess] = subprocess.run) -> list[CheckResult]:
+def run_health(ctx: Context, run: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+               credential_test: bool = False) -> list[CheckResult]:
+    """credential_test performs failed logins; keep it out of polling loops (Wazuh API locks out after 50/5 min)."""
     results: list[CheckResult] = []
 
     ps = run(compose_command(ctx, "ps", "-a", "--format", "json"), env=compose_env(ctx), capture_output=True, text=True)
@@ -219,7 +221,8 @@ def run_health(ctx: Context, run: Callable[..., subprocess.CompletedProcess] = s
         except ServiceError:
             return False
 
-    results.append(_guard("default_credentials", lambda: check_default_credentials(api_attempt, indexer_attempt)))
+    if credential_test:
+        results.append(_guard("default_credentials", lambda: check_default_credentials(api_attempt, indexer_attempt)))
     return results
 
 
