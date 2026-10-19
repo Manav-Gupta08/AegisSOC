@@ -1,0 +1,7 @@
+## AegisSOC audit rules (installed to /etc/audit/rules.d/aegissoc.rules).
+## File watches are handled by Wazuh FIM whodata, so only command execution is audited here.
+## Key audit-wazuh-c maps to Wazuh rule 80792 via etc/lists/audit-keys.
+
+## Commands run as root by a logged-in user (sudo, su, setuid). auid filter skips system services.
+-a always,exit -F arch=b64 -S execve -F euid=0 -F auid>=1000 -F auid!=unset -k audit-wazuh-c
+-a always,exit -F arch=b32 -S execve -F euid=0 -F auid>=1000 -F auid!=unset -k audit-wazuh-c
