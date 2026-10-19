@@ -2,8 +2,8 @@
 
 ## Daily routine
 
-```powershell
-aegis health                 # 9 checks; exit 0 PASS / 1 WARNING / 2 FAIL; JSON report in reports/runtime
+```sh
+aegis health                 # 8 checks; exit 0 PASS / 1 WARNING / 2 FAIL; JSON report in reports/runtime
 aegis metrics --days 7       # detection, volume, availability, case, resource metrics (JSON + Markdown)
 aegis scenarios run --all --authorize   # regression suite after any rule/config/version change
 ```
@@ -33,8 +33,8 @@ and `docker stats`. Each output states its sample size. They describe this lab o
 | Measurement | Value |
 |---|---|
 | Alerts, 7 days | 655 (626 on day 1, mostly setup and validation) |
-| Rule 510 rootcheck "trojaned file" | 257 (39%) — verified false positives (rust-coreutils), suppressed by 100900 |
-| Manager-container CIS (SCA) checks | 185 (28%) — not lab telemetry; SCA disabled on the manager |
+| Rule 510 rootcheck "trojaned file" | 257 (39%), verified false positives (rust-coreutils), suppressed by 100900 |
+| Manager-container CIS (SCA) checks | 185 (28%), not lab telemetry; SCA disabled on the manager |
 | Scenario pass rate / regressions | 1.0 (5 executed) / 0.0 |
 | Trigger-to-alert latency median / max | 0.257 s / 10.0 s (5 runs) |
 | Indexer data | ~2.5 MB; disk 7% |
@@ -43,7 +43,7 @@ and `docker stats`. Each output states its sample size. They describe this lab o
 ## Retention sizing
 
 Upper bound observed: ~3.8 KB per alert. At the post-tuning rate (to be re-measured over a full week),
-even 1,000 alerts/day for 30 days is ~115 MB — far below the 50 GB minimum. Retention is therefore limited
+even 1,000 alerts/day for 30 days is ~115 MB, far below the 50 GB minimum. Retention is therefore limited
 by policy, not disk, on Profile A.
 
 Retention is enforced by the index lifecycle (ISM) policy `aegis-alerts-retention`: `wazuh-alerts-*` indices
@@ -53,7 +53,7 @@ existing alert indices report the policy).
 
 ## Backup and restore
 
-```powershell
+```sh
 aegis backup create                  # cold backup to backups/ (git-ignored) or AEGIS_BACKUP_DIR
 aegis backup verify-restore [path]   # restores into an isolated project and checks it; default: latest backup
 ```
@@ -85,7 +85,7 @@ for real disaster recovery. Agents buffer events while the stack is stopped.
 | Manager container stayed `Up` while `analysisd`, `remoted`, `apid` were dead after a restart sequence | No events processed; Docker `restart: always` never triggered (upstream 4.14 behavior; fixed upstream in 5.0) | Detected by `aegis health` (API FAIL); recovered by `aegis compose restart wazuh.manager`. Restore verification now requires two healthy checks 30 s apart |
 | Health polling loops ran the default-credential probe ~30 times | 63 failed logins locked the host out of the Wazuh API for 300 s | Credential probe is opt-in (`aegis health --credential-test`), never used in loops |
 | ISM system indices created with 1 replica | Cluster yellow on a single node | `aegis provision` sets them to 0 replicas using the admin client certificate (protected indices) |
-| Restore check accepted the first partial alert count (38 of 664) | Misleading FAIL | Readiness waits until the snapshot count is reached or times out |
+| Restore check accepted the first partial alert count (38 of 664) | Misleading FAIL | Readiness waits until the snapshot count is reached or times out (unit-tested; not yet re-run live) |
 
 The credential probe performs deliberate failed logins: run it at most a few times per 5 minutes.
 

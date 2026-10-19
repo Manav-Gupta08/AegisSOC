@@ -18,7 +18,7 @@ Reference the verification performed in the commit body (test command, health re
 
 ## Before opening a pull request
 
-```powershell
+```sh
 pytest
 ```
 
@@ -31,7 +31,7 @@ pytest
 
 Every custom rule change must include:
 
-1. Stable rule ID in the AegisSOC range (100000–100999) — IDs are never reused.
+1. Stable rule ID in the AegisSOC range (100000–100999). IDs are never reused.
 2. Rationale, required telemetry, severity, and ATT&CK mapping where justified.
 3. Positive and negative test cases.
 4. False-positive considerations and known limitations.
@@ -42,5 +42,5 @@ live stack. CI validates; humans approve; deployment is a manual, documented ste
 
 ## Evidence
 
-- Synthetic fixtures live in `tests/fixtures/` and are labelled synthetic.
+- Synthetic fixtures are built inside the tests and must be labelled synthetic (module docstring or comment).
 - Real lab evidence is sanitized before commit and stored under `reports/examples/`.

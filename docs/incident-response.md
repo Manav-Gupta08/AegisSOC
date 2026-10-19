@@ -27,7 +27,7 @@ AegisSOC performs no automated response actions.
 
 ## Commands
 
-```powershell
+```sh
 aegis case alerts --rule 100200 --minutes 60          # find alert ids (read-only account)
 aegis case new --title "..." --severity high
 aegis case transition CASE-YYYYMMDD-NNN triage --reason "..."
@@ -49,7 +49,7 @@ aegis case report CASE-... --redact <hostname> <user>  # Markdown + JSON, escape
 | No lost updates | Save refuses if the case changed on disk since it was loaded | Regression test (found when two CLI runs interleaved) |
 | Safe rendering | All case text HTML-escaped and Markdown-escaped; optional term redaction | Unit test with injected `<img onerror>` and `|` |
 
-Limitations: integrity is tamper-*evident*, not tamper-*proof* — someone with write access can rewrite the
+Limitations: integrity is tamper-*evident*, not tamper-*proof*: someone with write access can rewrite the
 whole file and recompute every hash. Pushing case hashes to an external append-only store would be
 needed for stronger guarantees. Actor names are self-declared (`--actor`); there is no authentication.
 

@@ -5,7 +5,7 @@ Volumes are **estimates** until measured (Phase 7). Status: PASS / NOT VERIFIED 
 
 Agent configuration is managed centrally from `deployment/wazuh/agent-groups/<group>/agent.conf`:
 
-```powershell
+```sh
 aegis agent-config validate   # offline; safe for CI
 aegis agent-config apply      # manual, reviewed deployment to the manager; assigns agents by OS
 ```
@@ -29,6 +29,10 @@ The audit rules are kept for a future real Linux VM endpoint (Profile B), which 
 
 Default agent `localfile` entries for nginx logs remain (files absent); harmless but noted.
 
+**Linux hosts.** When the stack runs on Linux, the host itself is the Linux endpoint. Kernel audit is normally
+available there, so `configure-auditd.sh` applies, but the `linux` group config has no `audit.log` `<localfile>`
+yet, so audit events are not collected (NOT IMPLEMENTED). The statuses above were measured on the WSL2 endpoint.
+
 ## Windows endpoint (host, group `windows`)
 
 | Source | Collects | Why | Est. volume | Validate | Blind spots | Status |
@@ -36,7 +40,7 @@ Default agent `localfile` entries for nginx logs remain (files absent); harmless
 | Security log (agent default) | Logons (4624/4625), account and policy changes | Authentication and privilege | Medium | Failed local logon → rule 60122 | Depends on host audit policy | NOT VERIFIED |
 | Sysmon 1 | Process creation (minus noisy system helpers) | Execution visibility | Medium–high | Start `whoami.exe` → Sysmon event 1 in alerts/archives | Excluded helper binaries | NOT VERIFIED |
 | Sysmon 3 | Network connections from LOLBins only | Download/C2 via living-off-the-land binaries | Low | `curl.exe` is not covered; PowerShell web request is | All other processes' connections | NOT VERIFIED |
-| Sysmon 6 / 8 / 10 | Driver loads, remote threads, LSASS memory access | Rootkits, injection, credential dumping | Low | — | Kernel-level tampering can disable Sysmon | NOT VERIFIED |
+| Sysmon 6 / 8 / 10 | Driver loads, remote threads, LSASS memory access | Rootkits, injection, credential dumping | Low | Not defined yet | Kernel-level tampering can disable Sysmon | NOT VERIFIED |
 | Sysmon 11 / 12–14 | Startup-folder and task files; Run keys, Winlogon, IFEO, service ImagePath | Persistence | Low | Create/delete a Run value | WMI subscriptions, COM hijacks not covered | NOT VERIFIED |
 | PowerShell 4104 | Script block logging | Malicious script content | Medium | Requires script block logging policy enabled | Disabled by default on Windows | NOT VERIFIED |
 | Defender Operational | Detections, tamper events | AV signal | Low | EICAR-free: check event channel exists | Third-party AV replaces it | NOT VERIFIED |

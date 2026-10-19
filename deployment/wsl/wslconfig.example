@@ -1,5 +1,5 @@
 # AegisSOC recommended WSL2 limits (Profile A, 16 GB host).
-# Merge into %UserProfile%\.wslconfig — do not blindly overwrite existing settings.
+# Merge into %UserProfile%\.wslconfig; do not blindly overwrite existing settings.
 # Apply with `wsl --shutdown`, then restart Docker Desktop.
 
 [wsl2]

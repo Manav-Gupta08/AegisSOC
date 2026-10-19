@@ -45,20 +45,30 @@ real-world detection rate.
 
 Manifests live in `scenarios/<platform>/<ID>-<name>.yml` and are reviewed like code.
 
-```powershell
+```sh
 aegis scenarios list
 aegis scenarios run LNX-003 --authorize     # or --all --authorize
 aegis coverage                              # matrix from the latest scenario report
 ```
+
+Commands reach the Linux endpoint through the executor set by `AEGIS_LINUX_EXECUTOR`:
+
+| Value | Default on | Runs commands | `run_as: root` |
+|---|---|---|---|
+| `wsl:<distro>` | Windows hosts (`wsl:Ubuntu`) | `wsl -d <distro> -- <argv>` | `wsl -d <distro> -u root -- <argv>` |
+| `local` | Linux hosts | `<argv>` on this machine | `sudo -n -- <argv>`; run `sudo -v` first |
 
 Safety model:
 
 - Nothing executes without `--authorize`. Commands are fixed argument lists in reviewed manifests; no
   templating or input from alerts.
 - Target agent must be the single active agent in the scenario's group; otherwise the scenario is SKIPPED.
+- The executor must then report that agent's id and name (read from the endpoint's `client.keys`, key
+  excluded); a mismatch or unreadable identity SKIPS the scenario before any other command runs.
 - Prerequisites run first; a failure SKIPS the scenario before any change is made.
 - Correlation scenarios wait for a quiet window so earlier events cannot cause a false PASS.
-- Cleanup runs in a `finally` block and is verified by a separate check; failure → `CLEANUP_REQUIRED`.
+- Cleanup runs in a `finally` block, every step runs even if an earlier one fails, and a separate check
+  verifies the result; failure → `CLEANUP_REQUIRED`.
 
 Outcome rules (the command's exit code is recorded but never decides the outcome):
 
