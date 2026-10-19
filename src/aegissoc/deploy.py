@@ -7,6 +7,7 @@ import secrets
 import shutil
 import string
 import subprocess
+import sys
 import tarfile
 import tempfile
 import urllib.request
@@ -90,8 +91,17 @@ def init_secrets(paths: Paths) -> list[str]:
             added.append(key)
 
     if added or raw_has_bom:
-        paths.env_file.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+        write_private(paths.env_file, "\n".join(lines) + "\n")
     return added
+
+
+def write_private(path: Path, content: str) -> None:
+    """Write a file readable only by its owner (POSIX modes; Windows relies on the user-profile ACLs)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(content)
+    os.chmod(path, 0o600)
 
 
 def _sha256(path: Path) -> str:
@@ -241,6 +251,9 @@ def prepare(ctx: Context, force_render: bool = False, run: Runner = subprocess.r
     generate_certs(ctx.paths, ctx.lock, run=run)
 
     runtime = ctx.paths.runtime_dir
+    # Holds secrets; containers read the files through bind mounts, which this directory mode does not affect.
+    runtime.mkdir(parents=True, exist_ok=True)
+    os.chmod(runtime, 0o700)
     users_file = runtime / "internal_users.yml"
     if rehash_users or not users_file.is_file():
         if volume_exists(ctx.lock.compose_project, INDEXER_DATA_VOLUME, run=run):
@@ -286,23 +299,40 @@ def guard_compose_args(args: list[str]) -> None:
 
 
 MAX_MAP_COUNT = 262144
+MAX_MAP_COUNT_PROC = Path("/proc/sys/vm/max_map_count")
 
 
-def read_max_map_count(run: Runner = subprocess.run) -> int | None:
-    result = run(["wsl", "-d", "docker-desktop", "cat", "/proc/sys/vm/max_map_count"], capture_output=True, text=True)
+def read_max_map_count(run: Runner = subprocess.run, platform: str = sys.platform,
+                       proc: Path = MAX_MAP_COUNT_PROC) -> int | None:
+    """The kernel setting the indexer sees: Docker Desktop's VM on Windows, the host kernel on Linux."""
+    if platform == "win32":
+        result = run(["wsl", "-d", "docker-desktop", "cat", proc.as_posix()], capture_output=True, text=True)
+        text = result.stdout if result.returncode == 0 else ""
+    else:
+        try:
+            text = proc.read_text(encoding="ascii")
+        except OSError:
+            return None
     try:
-        return int(result.stdout.strip()) if result.returncode == 0 else None
+        return int(text.strip())
     except ValueError:
         return None
 
 
-def ensure_max_map_count(run: Runner = subprocess.run, log: Callable[[str], None] = print) -> None:
-    current = read_max_map_count(run)
+def ensure_max_map_count(run: Runner = subprocess.run, log: Callable[[str], None] = print, platform: str = sys.platform,
+                         proc: Path = MAX_MAP_COUNT_PROC) -> None:
+    current = read_max_map_count(run, platform, proc)
     if current is not None and current >= MAX_MAP_COUNT:
         return
+    if platform != "win32":
+        # Changing a host kernel setting needs root; AegisSOC never escalates privileges itself.
+        raise DeployError(
+            f"vm.max_map_count is {current}, the indexer needs >= {MAX_MAP_COUNT}. As root run "
+            f"`sysctl -w vm.max_map_count={MAX_MAP_COUNT}` and persist it with "
+            f"`echo vm.max_map_count={MAX_MAP_COUNT} > /etc/sysctl.d/99-aegissoc.conf`")
     log(f"Setting vm.max_map_count={MAX_MAP_COUNT} in the docker-desktop WSL distro (was {current})")
     run(["wsl", "-d", "docker-desktop", "sysctl", "-w", f"vm.max_map_count={MAX_MAP_COUNT}"], check=True, capture_output=True)
-    if (read_max_map_count(run) or 0) < MAX_MAP_COUNT:
+    if (read_max_map_count(run, platform, proc) or 0) < MAX_MAP_COUNT:
         raise DeployError("vm.max_map_count could not be raised; the indexer will fail to start")
 
 

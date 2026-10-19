@@ -59,7 +59,19 @@ def check_ports(settings: dict[str, str], bindable: Callable[[str, int], bool] =
     return CheckResult("host_ports", PASS, "all stack ports available")
 
 
-def run_preflight(paths: Paths, run: Callable[..., subprocess.CompletedProcess] = subprocess.run) -> list[CheckResult]:
+def check_max_map_count(current: int | None, platform: str) -> CheckResult:
+    if current is None:
+        where = "Docker Desktop not running?" if platform == "win32" else "/proc/sys/vm/max_map_count unreadable"
+        return CheckResult("vm_max_map_count", NOT_VERIFIED, f"could not read ({where})")
+    if current >= MAX_MAP_COUNT:
+        return CheckResult("vm_max_map_count", PASS, f"{current} (need >= {MAX_MAP_COUNT})")
+    fix = ("`aegis up` sets it" if platform == "win32"
+           else f"as root: sysctl -w vm.max_map_count={MAX_MAP_COUNT}, persist in /etc/sysctl.d")
+    return CheckResult("vm_max_map_count", WARNING, f"{current} (need >= {MAX_MAP_COUNT}; {fix})")
+
+
+def run_preflight(paths: Paths, run: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+                  platform: str = sys.platform) -> list[CheckResult]:
     results: list[CheckResult] = []
 
     py = sys.version_info
@@ -71,7 +83,9 @@ def run_preflight(paths: Paths, run: Callable[..., subprocess.CompletedProcess] 
     info = run(["docker", "info", "--format", "{{.ServerVersion}}|{{.MemTotal}}|{{.NCPU}}"], capture_output=True, text=True)
     daemon_up = info.returncode == 0
     if not daemon_up:
-        results.append(CheckResult("docker_daemon", FAIL, "Docker daemon not reachable; start Docker Desktop"))
+        hint = ("start Docker Desktop" if platform == "win32"
+                else "start the docker service and check that your user may access /var/run/docker.sock")
+        results.append(CheckResult("docker_daemon", FAIL, f"Docker daemon not reachable; {hint}"))
     else:
         server, mem, ncpu = info.stdout.strip().split("|")
         mem_gib = round(int(mem) / GIB, 1)
@@ -109,18 +123,14 @@ def run_preflight(paths: Paths, run: Callable[..., subprocess.CompletedProcess] 
                 "Move it via Docker Desktop > Settings > Resources > Disk image location if space is low.",
                 {"drive_free_gib": free}))
 
-    if sys.platform == "win32":
-        current = read_max_map_count(run) if daemon_up else None
-        if current is None:
-            results.append(CheckResult("vm_max_map_count", NOT_VERIFIED, "could not read (Docker Desktop not running?)"))
-        else:
-            results.append(CheckResult("vm_max_map_count", PASS if current >= MAX_MAP_COUNT else WARNING,
-                                       f"{current} (need >= {MAX_MAP_COUNT}; `aegis up` sets it)"))
-
+    if platform == "win32":
+        results.append(check_max_map_count(read_max_map_count(run, platform) if daemon_up else None, platform))
         wslconfig = Path.home() / ".wslconfig"
         memory = parse_wslconfig_memory(wslconfig.read_text(encoding="utf-8")) if wslconfig.is_file() else None
         results.append(CheckResult(
             "wsl_memory_cap", PASS if memory else WARNING,
             f"[wsl2] memory={memory}" if memory else "no WSL2 memory cap; see deployment/wsl/wslconfig.example"))
+    else:
+        results.append(check_max_map_count(read_max_map_count(run, platform), platform))
 
     return results

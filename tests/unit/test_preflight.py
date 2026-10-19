@@ -2,8 +2,8 @@ import socket
 
 import pytest
 
-from aegissoc.health import PASS, WARNING
-from aegissoc.preflight import check_ports, parse_version, parse_wslconfig_memory, port_bindable
+from aegissoc.health import NOT_VERIFIED, PASS, WARNING
+from aegissoc.preflight import check_max_map_count, check_ports, parse_version, parse_wslconfig_memory, port_bindable
 
 
 @pytest.mark.parametrize("text,expected", [("2.40.3", (2, 40, 3)), ("v2.24.4-desktop.1", (2, 24, 4)), ("none", None)])
@@ -29,3 +29,11 @@ def test_port_bindable_detects_listener():
         listener.bind(("127.0.0.1", 0))
         listener.listen()
         assert not port_bindable("127.0.0.1", listener.getsockname()[1])
+
+
+def test_max_map_count_advice_matches_host():
+    assert check_max_map_count(262144, "linux").status == PASS
+    assert check_max_map_count(None, "linux").status == NOT_VERIFIED
+    linux, windows = check_max_map_count(65530, "linux"), check_max_map_count(65530, "win32")
+    assert linux.status == windows.status == WARNING
+    assert "/etc/sysctl.d" in linux.detail and "aegis up" in windows.detail

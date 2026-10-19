@@ -1,5 +1,7 @@
 import hashlib
 import io
+import os
+import stat
 import subprocess
 import tarfile
 from pathlib import Path
@@ -145,3 +147,44 @@ def test_partial_certs_are_not_regenerated(ctx):
     (certs / "root-ca.pem").write_text("x")
     with pytest.raises(DeployError, match="Partial"):
         deploy.generate_certs(ctx.paths, ctx.lock, run=lambda *a, **k: pytest.fail("generator must not run"))
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+def test_env_file_is_owner_only(ctx):
+    ctx.paths.env_file.chmod(0o644)
+    ctx.paths.env_file.write_text(ctx.paths.env_file.read_text().replace("AEGIS_RETENTION_DAYS=30\n", ""))
+    assert deploy.init_secrets(ctx.paths) == ["AEGIS_RETENTION_DAYS"]
+    assert stat.S_IMODE(ctx.paths.env_file.stat().st_mode) == 0o600
+
+
+def _no_run(*args, **kwargs):
+    pytest.fail("must not run a command on this platform")
+
+
+@pytest.mark.parametrize("value,expected", [("262144\n", 262144), ("65530\n", 65530), ("garbage", None)])
+def test_read_max_map_count_on_linux_reads_host_kernel(tmp_path, value, expected):
+    proc = tmp_path / "max_map_count"
+    proc.write_text(value)
+    assert deploy.read_max_map_count(run=_no_run, platform="linux", proc=proc) == expected
+    assert deploy.read_max_map_count(run=_no_run, platform="linux", proc=tmp_path / "missing") is None
+
+
+def test_ensure_max_map_count_on_linux_never_escalates(tmp_path):
+    proc = tmp_path / "max_map_count"
+    proc.write_text("65530\n")
+    with pytest.raises(DeployError, match="sysctl -w vm.max_map_count=262144"):
+        deploy.ensure_max_map_count(run=_no_run, log=lambda m: None, platform="linux", proc=proc)
+    proc.write_text("262144\n")
+    deploy.ensure_max_map_count(run=_no_run, log=lambda m: None, platform="linux", proc=proc)
+
+
+def test_ensure_max_map_count_on_windows_sets_docker_desktop_vm():
+    calls, values = [], iter(["65530", "262144"])
+
+    def run(cmd, **kwargs):
+        calls.append(cmd)
+        out = next(values) if cmd[-1] == "/proc/sys/vm/max_map_count" else ""
+        return subprocess.CompletedProcess(cmd, 0, stdout=out, stderr="")
+
+    deploy.ensure_max_map_count(run=run, log=lambda m: None, platform="win32")
+    assert ["wsl", "-d", "docker-desktop", "sysctl", "-w", "vm.max_map_count=262144"] in calls

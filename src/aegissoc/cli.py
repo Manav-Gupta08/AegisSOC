@@ -44,8 +44,7 @@ def cmd_prepare(args: argparse.Namespace) -> int:
 def cmd_up(_: argparse.Namespace) -> int:
     ctx = Context.load()
     deploy.require_prepared(ctx)
-    if sys.platform == "win32":
-        deploy.ensure_max_map_count()
+    deploy.ensure_max_map_count()
     return subprocess.run(deploy.compose_command(ctx, "up", "-d"), env=deploy.compose_env(ctx)).returncode
 
 
