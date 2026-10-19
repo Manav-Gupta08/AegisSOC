@@ -1,0 +1,83 @@
+<!--
+  AegisSOC Sysmon configuration (Profile A, analyst workstation as endpoint).
+  Goal: high-value events with bounded volume. Every included event type has a stated purpose.
+  Install/update: deployment/endpoints/windows/install-sysmon.ps1
+-->
+<Sysmon schemaversion="4.50">
+  <HashAlgorithms>SHA256</HashAlgorithms>
+  <CheckRevocation>False</CheckRevocation>
+  <EventFiltering>
+
+    <!-- Event 1: process creation (all, minus high-volume benign updaters). -->
+    <RuleGroup name="process_create" groupRelation="or">
+      <ProcessCreate onmatch="exclude">
+        <Image condition="is">C:\Windows\System32\conhost.exe</Image>
+        <Image condition="is">C:\Windows\System32\backgroundTaskHost.exe</Image>
+        <Image condition="is">C:\Windows\System32\RuntimeBroker.exe</Image>
+        <Image condition="is">C:\Windows\System32\SearchProtocolHost.exe</Image>
+        <Image condition="is">C:\Windows\System32\SearchFilterHost.exe</Image>
+        <ParentImage condition="is">C:\Windows\System32\SearchIndexer.exe</ParentImage>
+      </ProcessCreate>
+    </RuleGroup>
+
+    <!-- Event 3: network connections from binaries commonly abused for download/C2 (LOLBins). -->
+    <RuleGroup name="network_connect" groupRelation="or">
+      <NetworkConnect onmatch="include">
+        <Image condition="end with">\powershell.exe</Image>
+        <Image condition="end with">\pwsh.exe</Image>
+        <Image condition="end with">\cmd.exe</Image>
+        <Image condition="end with">\rundll32.exe</Image>
+        <Image condition="end with">\regsvr32.exe</Image>
+        <Image condition="end with">\mshta.exe</Image>
+        <Image condition="end with">\certutil.exe</Image>
+        <Image condition="end with">\bitsadmin.exe</Image>
+        <Image condition="end with">\wscript.exe</Image>
+        <Image condition="end with">\cscript.exe</Image>
+        <Image condition="end with">\msbuild.exe</Image>
+      </NetworkConnect>
+    </RuleGroup>
+
+    <!-- Event 6: driver loads (rare, high value). -->
+    <RuleGroup name="driver_load" groupRelation="or">
+      <DriverLoad onmatch="exclude" />
+    </RuleGroup>
+
+    <!-- Event 8: remote thread creation (injection indicator). -->
+    <RuleGroup name="create_remote_thread" groupRelation="or">
+      <CreateRemoteThread onmatch="exclude">
+        <SourceImage condition="is">C:\Windows\System32\csrss.exe</SourceImage>
+        <SourceImage condition="is">C:\Windows\System32\wininit.exe</SourceImage>
+      </CreateRemoteThread>
+    </RuleGroup>
+
+    <!-- Event 10: access to LSASS with memory-read rights (credential dumping indicator). -->
+    <RuleGroup name="process_access" groupRelation="and">
+      <ProcessAccess onmatch="include">
+        <TargetImage condition="is">C:\Windows\System32\lsass.exe</TargetImage>
+        <GrantedAccess condition="contains any">0x1010;0x1410;0x1438;0x143a;0x1fffff</GrantedAccess>
+      </ProcessAccess>
+    </RuleGroup>
+
+    <!-- Event 11: files created in autostart locations. -->
+    <RuleGroup name="file_create" groupRelation="or">
+      <FileCreate onmatch="include">
+        <TargetFilename condition="contains">\Start Menu\Programs\Startup\</TargetFilename>
+        <TargetFilename condition="begin with">C:\Windows\System32\Tasks\</TargetFilename>
+      </FileCreate>
+    </RuleGroup>
+
+    <!-- Events 12/13/14: registry persistence locations. -->
+    <RuleGroup name="registry_persistence" groupRelation="or">
+      <RegistryEvent onmatch="include">
+        <TargetObject condition="contains">\CurrentVersion\Run</TargetObject>
+        <TargetObject condition="contains">\CurrentVersion\RunOnce</TargetObject>
+        <TargetObject condition="contains">\CurrentVersion\Winlogon\Shell</TargetObject>
+        <TargetObject condition="contains">\CurrentVersion\Winlogon\Userinit</TargetObject>
+        <TargetObject condition="contains">\CurrentVersion\Image File Execution Options\</TargetObject>
+        <TargetObject condition="end with">\ImagePath</TargetObject>
+      </RegistryEvent>
+    </RuleGroup>
+
+    <!-- Disabled for volume on Profile A: ImageLoad (7), DNS (22), FileDelete (23/26), Pipe (17/18). -->
+  </EventFiltering>
+</Sysmon>
