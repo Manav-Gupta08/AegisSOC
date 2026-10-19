@@ -13,6 +13,9 @@ deployment/wazuh/runtime/
 # Runtime reports may contain real hostnames/IPs; only sanitized examples are committed
 reports/runtime/
 
+# Real incident cases and evidence (lab data); sanitized reports go to reports/examples
+cases/
+
 # Python
 __pycache__/
 *.py[cod]

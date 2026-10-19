@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegissoc.local/schemas/case-1.0.json",
+  "title": "AegisSOC incident case",
+  "type": "object",
+  "required": ["schema_version", "case_id", "title", "created_at", "severity", "status", "classification",
+               "confidence", "affected_endpoints", "source_alerts", "evidence", "notes", "audit"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "case_id": {"type": "string", "pattern": "^CASE-\\d{8}-\\d{3}$"},
+    "title": {"type": "string", "minLength": 3, "maxLength": 200},
+    "created_at": {"type": "string", "format": "date-time"},
+    "severity": {"enum": ["low", "medium", "high", "critical"]},
+    "status": {"enum": ["new", "triage", "investigating", "containment_recommended", "resolved", "closed", "false_positive"]},
+    "classification": {"enum": ["unclassified", "true_positive", "benign_true_positive", "false_positive", "test_activity"]},
+    "confidence": {"enum": ["low", "medium", "high"]},
+    "affected_endpoints": {"type": "array", "items": {"type": "string"}},
+    "source_alerts": {"type": "array", "items": {"$ref": "#/$defs/alert"}},
+    "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}},
+    "notes": {"type": "array", "items": {"$ref": "#/$defs/note"}},
+    "findings": {"type": "string"},
+    "escalation_rationale": {"type": "string"},
+    "recommendations": {"type": "array", "items": {"type": "string"}},
+    "closure_reason": {"type": "string"},
+    "lessons_learned": {"type": "string"},
+    "audit": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/audit"}}
+  },
+  "$defs": {
+    "alert": {
+      "type": "object",
+      "required": ["alert_id", "index", "timestamp", "rule_id", "rule_level", "rule_description", "agent"],
+      "additionalProperties": false,
+      "properties": {
+        "alert_id": {"type": "string"},
+        "index": {"type": "string"},
+        "timestamp": {"type": "string"},
+        "rule_id": {"type": "string"},
+        "rule_level": {"type": "integer"},
+        "rule_description": {"type": "string"},
+        "mitre": {"type": "array", "items": {"type": "string"}},
+        "agent": {"type": "string"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["evidence_id", "kind", "reference", "sha256", "collected_at"],
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {"type": "string", "pattern": "^EV-\\d{3}$"},
+        "kind": {"enum": ["alert", "file", "report"]},
+        "reference": {"type": "string"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "collected_at": {"type": "string"},
+        "description": {"type": "string"}
+      }
+    },
+    "note": {
+      "type": "object",
+      "required": ["at", "author", "text"],
+      "additionalProperties": false,
+      "properties": {"at": {"type": "string"}, "author": {"type": "string"}, "text": {"type": "string"}}
+    },
+    "audit": {
+      "type": "object",
+      "required": ["seq", "at", "actor", "action", "detail", "prev_hash", "hash"],
+      "additionalProperties": false,
+      "properties": {
+        "seq": {"type": "integer", "minimum": 1},
+        "at": {"type": "string"},
+        "actor": {"type": "string"},
+        "action": {"type": "string"},
+        "detail": {"type": "object"},
+        "prev_hash": {"type": "string"},
+        "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}
