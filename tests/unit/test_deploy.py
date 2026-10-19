@@ -89,9 +89,10 @@ def test_render_internal_users_rejects_non_bcrypt():
         render_internal_users("plaintext", FAKE_HASH)
 
 
-def test_render_manager_conf_enables_enrollment_password():
-    out = render_manager_conf("<auth>\n<use_password>no</use_password>\n</auth>")
+def test_render_manager_conf_enables_enrollment_password_and_disables_sca():
+    out = render_manager_conf("<auth>\n<use_password>no</use_password>\n</auth>\n<sca>\n    <enabled>yes</enabled>\n</sca>")
     assert "<use_password>yes</use_password>" in out and "no</use_password>" not in out
+    assert "<sca>\n    <enabled>no</enabled>" in out
 
 
 def test_render_manager_conf_fails_on_unexpected_layout():

@@ -195,10 +195,16 @@ kibanaserver:
 
 
 def render_manager_conf(upstream_conf: str) -> str:
-    needle = "<use_password>no</use_password>"
-    if upstream_conf.count(needle) != 1:
-        raise DeployError("Upstream wazuh_manager.conf layout changed: expected exactly one <use_password>no</use_password>")
-    return upstream_conf.replace(needle, "<use_password>yes</use_password>")
+    edits = {
+        "<use_password>no</use_password>": "<use_password>yes</use_password>",
+        # Manager-container CIS (Amazon Linux) checks are not lab telemetry; they were ~28% of alert volume.
+        "<sca>\n    <enabled>yes</enabled>": "<sca>\n    <enabled>no</enabled>",
+    }
+    for needle, replacement in edits.items():
+        if upstream_conf.count(needle) != 1:
+            raise DeployError(f"Upstream wazuh_manager.conf layout changed: expected exactly one {needle!r}")
+        upstream_conf = upstream_conf.replace(needle, replacement)
+    return upstream_conf
 
 
 def render_dashboard_wazuh_yml(api_password: str) -> str:
@@ -223,7 +229,8 @@ def volume_exists(project: str, volume: str, run: Runner = subprocess.run) -> bo
     return result.returncode == 0
 
 
-def prepare(ctx: Context, force_render: bool = False, run: Runner = subprocess.run, log: Callable[[str], None] = print) -> None:
+def prepare(ctx: Context, force_render: bool = False, run: Runner = subprocess.run, log: Callable[[str], None] = print,
+            rehash_users: bool = False) -> None:
     for key in SECRET_KEYS:
         validate_secret(key, ctx.secret(key))
 
@@ -235,7 +242,7 @@ def prepare(ctx: Context, force_render: bool = False, run: Runner = subprocess.r
 
     runtime = ctx.paths.runtime_dir
     users_file = runtime / "internal_users.yml"
-    if force_render or not users_file.is_file():
+    if rehash_users or not users_file.is_file():
         if volume_exists(ctx.lock.compose_project, INDEXER_DATA_VOLUME, run=run):
             log("WARNING: indexer data volume exists; new internal_users.yml takes effect only after securityadmin.sh (see docs/deployment.md)")
         log("Hashing indexer passwords with the indexer image's hash.sh")
