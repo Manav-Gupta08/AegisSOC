@@ -13,11 +13,53 @@ READER_INDEXER_ROLE = "aegis_monitor"
 READER_API_USER = "aegis-reader"
 READONLY_API_ROLE = "readonly"
 WAZUH_INDEX_PATTERNS = ["wazuh-alerts-*", "wazuh-archives-*", "wazuh-monitoring-*", "wazuh-statistics-*"]
+RETENTION_POLICY_ID = "aegis-alerts-retention"
+
+
+def retention_policy(days: int) -> dict:
+    if not 1 <= days <= 3650:
+        raise ValueError("AEGIS_RETENTION_DAYS must be between 1 and 3650")
+    return {"policy": {
+        "description": f"AegisSOC: delete wazuh-alerts indices {days} days after creation",
+        "default_state": "hot",
+        "states": [
+            {"name": "hot", "actions": [], "transitions": [{"state_name": "delete", "conditions": {"min_index_age": f"{days}d"}}]},
+            {"name": "delete", "actions": [{"delete": {}}], "transitions": []},
+        ],
+        "ism_template": [{"index_patterns": ["wazuh-alerts-*"], "priority": 100}],
+    }}
+
+
+def provision_retention(admin: Indexer, days: int, superadmin: Indexer | None = None) -> dict:
+    """Create/update the ISM policy and attach it to existing alert indices. Idempotent."""
+    body = retention_policy(days)
+    path = f"/_plugins/_ism/policies/{RETENTION_POLICY_ID}"
+    try:
+        current = admin.request("GET", path)
+        params = {"if_seq_no": current["_seq_no"], "if_primary_term": current["_primary_term"]}
+        admin.request("PUT", path, params=params, json=body)
+    except ServiceError as exc:
+        if exc.status_code != 404:
+            raise
+        admin.request("PUT", path, json=body)
+    # Already-managed indices are reported as failures by this API; that is expected on re-runs.
+    added = admin.request("POST", "/_plugins/_ism/add/wazuh-alerts-*", json={"policy_id": RETENTION_POLICY_ID})
+    # ISM creates system indices with 1 replica, which a single node can never assign (cluster stays yellow).
+    (superadmin or admin).request("PUT", "/.opendistro-ism-*,.opendistro-job-scheduler-lock/_settings",
+                                  params={"expand_wildcards": "all"}, json={"index": {"number_of_replicas": 0}})
+    return added
 
 
 def indexer_client(ctx: Context, username: str, password: str) -> Indexer:
     session = make_session(ctx.paths.certs_dir(ctx.lock) / "root-ca.pem", INDEXER_TLS_NAME)
     return Indexer(session, INDEXER_URL, username, password)
+
+
+def indexer_superadmin(ctx: Context) -> Indexer:
+    """Client-certificate (admin.pem) access; required only to change protected system indices."""
+    certs = ctx.paths.certs_dir(ctx.lock)
+    session = make_session(certs / "root-ca.pem", INDEXER_TLS_NAME, client_cert=(certs / "admin.pem", certs / "admin-key.pem"))
+    return Indexer(session, INDEXER_URL, "admin", ctx.secret("INDEXER_ADMIN_PASSWORD"))
 
 
 def api_client(ctx: Context) -> WazuhApi:
@@ -84,13 +126,19 @@ def provision_api(api: WazuhApi, wazuh_user_password: str, reader_password: str,
     roles = [r for r in api.affected_items("/security/roles", {"search": READONLY_API_ROLE}) if r.get("name") == READONLY_API_ROLE]
     if not roles:
         raise ServiceError(f"Wazuh API role {READONLY_API_ROLE!r} not found")
-    api.request("POST", f"/security/users/{reader_id}/roles", params={"role_ids": roles[0]["id"]})
+    reader = next((u for u in api.affected_items("/security/users", {"limit": 500}) if int(u["id"]) == reader_id), {})
+    if roles[0]["id"] not in (reader.get("roles") or []):
+        api.request("POST", f"/security/users/{reader_id}/roles", params={"role_ids": roles[0]["id"]})
 
 
 def provision(ctx: Context, log: Callable[[str], None] = print) -> None:
     log("Indexer: creating role aegis_monitor and user aegis_reader")
     admin = indexer_client(ctx, "admin", ctx.secret("INDEXER_ADMIN_PASSWORD"))
     provision_indexer(admin, ctx.secret("INDEXER_READER_PASSWORD"))
+
+    days = ctx.int_setting("AEGIS_RETENTION_DAYS")
+    added = provision_retention(admin, days, superadmin=indexer_superadmin(ctx))
+    log(f"Indexer: retention policy {RETENTION_POLICY_ID} ({days} days); newly attached indices: {added.get('updated_indices', 0)}")
 
     log("Wazuh API: rotating default 'wazuh' user and creating read-only 'aegis-reader'")
     api = api_client(ctx)

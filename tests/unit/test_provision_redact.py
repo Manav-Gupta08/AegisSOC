@@ -57,6 +57,14 @@ def test_provision_api_is_idempotent_for_existing_reader():
     assert ("PUT", "/security/users/7", {"json": {"password": "b"}}) in api.calls
 
 
+def test_existing_role_link_is_not_recreated():
+    # Regression: re-running provision failed with "No link was created to user aegis-reader".
+    api = RecordingApi([{"id": 1, "username": "wazuh"}, {"id": 7, "username": READER_API_USER, "roles": [2]}],
+                       [{"id": 2, "name": "readonly"}])
+    provision_api(api, "a", "b", ALWAYS)
+    assert not any(p.endswith("/roles") for _, p, _ in api.calls)
+
+
 def test_provision_api_fails_without_readonly_role():
     api = RecordingApi([{"id": 1, "username": "wazuh"}], [])
     with pytest.raises(ServiceError):
@@ -112,3 +120,39 @@ def test_provision_indexer_role_is_read_only():
     assert role["cluster_permissions"] == ["cluster_monitor"]
     assert all(p["allowed_actions"] == ["read"] for p in role["index_permissions"])
     assert calls[1][2]["json"]["opendistro_security_roles"] == ["aegis_monitor"]
+
+
+def test_retention_policy_shape_and_bounds():
+    from aegissoc.provision import retention_policy
+
+    p = retention_policy(30)["policy"]
+    assert p["states"][0]["transitions"][0]["conditions"] == {"min_index_age": "30d"}
+    assert p["states"][1]["actions"] == [{"delete": {}}]
+    assert p["ism_template"][0]["index_patterns"] == ["wazuh-alerts-*"]
+    for bad in (0, 5000):
+        with pytest.raises(ValueError):
+            retention_policy(bad)
+
+
+def test_provision_retention_creates_then_updates_with_concurrency_tokens():
+    from aegissoc.provision import provision_retention
+
+    class Idx:
+        def __init__(self, exists):
+            self.exists, self.calls = exists, []
+
+        def request(self, method, path, **kw):
+            self.calls.append((method, path, kw.get("params")))
+            if method == "GET":
+                if not self.exists:
+                    raise ServiceError("missing", 404)
+                return {"_seq_no": 7, "_primary_term": 1}
+            return {"updated_indices": 2}
+
+    new = Idx(exists=False)
+    provision_retention(new, 30)
+    assert [c[0] for c in new.calls] == ["GET", "PUT", "POST", "PUT"] and new.calls[1][2] is None
+    assert new.calls[3][1].startswith("/.opendistro-ism-"), "ISM system indices must be set to 0 replicas (single node)"
+    existing = Idx(exists=True)
+    provision_retention(existing, 30)
+    assert existing.calls[1][2] == {"if_seq_no": 7, "if_primary_term": 1}

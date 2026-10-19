@@ -34,11 +34,13 @@ class ServiceError(RuntimeError):
         self.status_code = status_code
 
 
-def make_session(ca_file: Path, tls_hostname: str) -> requests.Session:
+def make_session(ca_file: Path, tls_hostname: str, client_cert: tuple[Path, Path] | None = None) -> requests.Session:
     if not ca_file.is_file():
         raise FileNotFoundError(f"CA bundle not found: {ca_file}")
     session = requests.Session()
     session.verify = str(ca_file)
+    if client_cert:
+        session.cert = (str(client_cert[0]), str(client_cert[1]))
     session.mount("https://", _AssertHostnameAdapter(tls_hostname))
     return session
 
