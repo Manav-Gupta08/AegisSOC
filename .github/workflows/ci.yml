@@ -28,6 +28,28 @@ jobs:
       - run: aegis agent-config validate
       - run: aegis scenarios validate
       - run: aegis playbooks validate
+      - run: aegis telemetry --validate
+
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Shell scripts (bash -n, shellcheck)
+        run: |
+          for f in $(git ls-files '*.sh'); do bash -n "$f"; done
+          shellcheck $(git ls-files '*.sh')
+      - name: PowerShell scripts parse without errors
+        shell: pwsh
+        run: |
+          $failed = $false
+          foreach ($f in git ls-files '*.ps1') {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $f), [ref]$null, [ref]$errors) | Out-Null
+            foreach ($e in $errors) { Write-Output "${f}:$($e.Extent.StartLineNumber): $($e.Message)"; $failed = $true }
+          }
+          if ($failed) { exit 1 }
 
   secret-scan:
     runs-on: ubuntu-latest
