@@ -1,0 +1,29 @@
+id: PB-003
+title: New scheduled task, service unit, or local account
+applies_to_rules: ["100201", "100202"]
+description: >
+  A cron entry, a systemd unit under /etc/systemd/system, or the local account database changed. These are
+  common persistence steps, and also routine results of package installs and administration.
+steps:
+  - kind: manual
+    text: >
+      Read the attached alert's file path and diff. For units and cron entries, note the command they run; for
+      account changes, compare the passwd/group diff for new UID 0 accounts or new admin group members.
+  - kind: manual
+    text: >
+      Check whether a package install (dpkg.log), a known admin change, or an authorized scenario (LNX-004,
+      LNX-005) explains it.
+  - kind: action
+    action: quarantine_file
+    text: >
+      If unauthorized, quarantine the unit or cron file (target: its absolute path) before stopping anything it
+      started, so the evidence is kept.
+  - kind: action
+    action: disable_account
+    text: >
+      If an unauthorized account was created, lock it (target: the user name).
+  - kind: action
+    action: isolate_host
+    text: >
+      If the persistence points to an active intrusion (unknown binaries, outbound connections), isolate the
+      endpoint, keeping only its connection to the Wazuh manager so telemetry continues.

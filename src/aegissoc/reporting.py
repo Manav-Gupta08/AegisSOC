@@ -52,6 +52,10 @@ def timeline(case: dict[str, Any]) -> list[tuple[datetime, str, str]]:
             "add_alert": lambda: f"alert {d['alert']['alert_id']} attached",
             "add_evidence": lambda: f"evidence {d['evidence']['evidence_id']} collected",
             "recommend": lambda: "recommendation added",
+            "propose_action": lambda: f"response action {d['action']['action_id']} proposed ({d['action']['action_type']})",
+            "approve_action": lambda: f"response action {d['action_id']} approved",
+            "reject_action": lambda: f"response action {d['action_id']} rejected: {d.get('reason', '')}",
+            "execute_action": lambda: f"response action {d['action_id']} SIMULATED (no change made)",
         }.get(e["action"], lambda: e["action"])()
         rows.append((_ts(e["at"]), f"audit #{e['seq']} ({e['actor']})", summary))
     return sorted(rows, key=lambda r: r[0])
@@ -90,6 +94,13 @@ def render_markdown(case: dict[str, Any], integrity: dict[str, Any], redact_term
         lines += ["## Escalation rationale", "", md(c["escalation_rationale"]), ""]
     lines += ["## Recommendations (not executed)", ""]
     lines += [f"- {md(r)}" for r in c["recommendations"]] or ["- None."]
+    lines += ["", "## Response actions (simulation only)", "",
+              "| ID | Playbook | Action | Endpoint | Target | State | Proposed by | Approved by | Simulated plan |",
+              "|---|---|---|---|---|---|---|---|---|"]
+    lines += [f"| {md(x['action_id'])} | {md(x['playbook'])} step {x['step']} | {md(x['action_type'])} | {md(x['endpoint'])} "
+              f"| {md(x['target'])} | {md(x['state'])} | {md(x['proposed_by'])} | {md(x.get('approved_by', '-'))} "
+              f"| {md(x.get('plan', '-'))} |" for x in c.get("response_actions", [])] \
+        or ["| - | - | - | - | - | - | - | - | none |"]
     lines += ["", "## Analyst notes", ""]
     lines += [f"- {md(n['at'])} {md(n['author'])}: {md(n['text'])}" for n in c["notes"]] or ["- None."]
     if c.get("closure_reason"):

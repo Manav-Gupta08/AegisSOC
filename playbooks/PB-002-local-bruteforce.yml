@@ -1,0 +1,20 @@
+id: PB-002
+title: Repeated local authentication failures
+applies_to_rules: ["100100"]
+description: >
+  Six or more authentication failures for one user within two minutes on a single endpoint. Most often a
+  mistyped password or a script with a stale credential; treat it as a lead until corroborated.
+steps:
+  - kind: manual
+    text: >
+      Check for a successful authentication for the same user right after the failures (rules 5402, 5501) and
+      identify the session (tty, parent process) that produced them.
+  - kind: manual
+    text: >
+      Confirm with the account owner whether the attempts were theirs. An authorized scenario (LNX-001) also
+      produces this pattern.
+  - kind: action
+    action: disable_account
+    text: >
+      If the attempts were not the owner's and a later success suggests the password was guessed, lock the
+      account (target: the user name) and require a password reset.

@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from . import cases, provision, reporting
+from . import cases, playbooks, provision, reporting
 from .settings import Context, find_repo_root
 
 
@@ -82,6 +82,31 @@ def cmd(args: argparse.Namespace) -> int:
     elif a == "correct":
         cases.record(case, args.actor, "correction", {"field": args.field, "value": args.value, "reason": args.reason})
         _save(store, case, base)
+    elif a == "propose":
+        pb = playbooks.load_playbooks(find_repo_root()).get(args.playbook)
+        if pb is None:
+            raise playbooks.PlaybookError(f"unknown playbook {args.playbook}")
+        detail = playbooks.proposal(pb, args.step, case, args.endpoint, args.target, args.purpose)
+        action_id = cases.next_action_id(case)
+        cases.record(case, args.actor, "propose_action", {"action": {"action_id": action_id, **detail}})
+        _save(store, case, base)
+        print(f"{action_id} proposed: {playbooks.simulation_plan(detail)} (needs approval by another analyst)")
+    elif a == "approve":
+        cases.record(case, args.actor, "approve_action", {"action_id": args.action_id})
+        _save(store, case, base)
+    elif a == "reject":
+        cases.record(case, args.actor, "reject_action", {"action_id": args.action_id, "reason": args.reason})
+        _save(store, case, base)
+    elif a == "execute":
+        if not args.simulate:
+            raise cases.CaseError("only --simulate is supported; AegisSOC never changes endpoints")
+        action = next((x for x in case.get("response_actions", []) if x["action_id"] == args.action_id), None)
+        if action is None:
+            raise cases.CaseError(f"unknown response action {args.action_id!r}")
+        plan = playbooks.simulation_plan(action)
+        cases.record(case, args.actor, "execute_action", {"action_id": args.action_id, "mode": "simulation", "plan": plan})
+        _save(store, case, base)
+        print(reporting.terminal(f"SIMULATED (no change made): {plan}"))
     elif a == "verify":
         problems = store.verify_evidence_files(case)
         print("audit trail: VERIFIED")
@@ -139,6 +164,24 @@ def register(sub: argparse._SubParsersAction) -> None:
     co.add_argument("field", choices=sorted(cases.SETTABLE))
     co.add_argument("value")
     co.add_argument("--reason", required=True)
+    pr = with_actor(cs.add_parser("propose", help="propose a playbook response action (needs a second analyst's approval)"))
+    pr.add_argument("case_id")
+    pr.add_argument("playbook")
+    pr.add_argument("step", type=int)
+    pr.add_argument("--endpoint", required=True, help="one of the case's affected endpoints")
+    pr.add_argument("--target", help="account, file path, or IP address, depending on the action")
+    pr.add_argument("--purpose", required=True)
+    ap = with_actor(cs.add_parser("approve", help="approve a proposed response action"))
+    ap.add_argument("case_id")
+    ap.add_argument("action_id")
+    rj = with_actor(cs.add_parser("reject", help="reject a proposed or approved response action"))
+    rj.add_argument("case_id")
+    rj.add_argument("action_id")
+    rj.add_argument("--reason", required=True)
+    ex = with_actor(cs.add_parser("execute", help="record a simulated execution of an approved action"))
+    ex.add_argument("case_id")
+    ex.add_argument("action_id")
+    ex.add_argument("--simulate", action="store_true", help="required: only simulation is supported")
     rp = cs.add_parser("report")
     rp.add_argument("case_id")
     rp.add_argument("--redact", nargs="*", default=[], help="terms to replace with [REDACTED] (hostnames, users)")

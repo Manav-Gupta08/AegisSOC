@@ -27,6 +27,7 @@ jobs:
       - run: aegis detections validate
       - run: aegis agent-config validate
       - run: aegis scenarios validate
+      - run: aegis playbooks validate
 
   secret-scan:
     runs-on: ubuntu-latest

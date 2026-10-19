@@ -8,7 +8,8 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import agentconfig, backup, case_cli, cases, coverage, deploy, detections, health, metrics, preflight, provision, scenarios
+from . import (agentconfig, backup, case_cli, cases, coverage, deploy, detections, health, metrics, playbooks, preflight,
+               provision, scenarios)
 from .clients import ServiceError
 from .settings import Context, Paths, find_repo_root
 
@@ -153,6 +154,15 @@ def cmd_scenarios(args: argparse.Namespace) -> int:
     return 0 if all(r.status == scenarios.PASSED for r in results) else 2
 
 
+def cmd_playbooks(_: argparse.Namespace) -> int:
+    loaded = playbooks.load_playbooks(find_repo_root())
+    for pb in loaded.values():
+        actions = [f"{n}:{s['action']}" for n, s in enumerate(pb["steps"], start=1) if s["kind"] == "action"]
+        print(f"  {pb['id']}  rules={pb['applies_to_rules']}  actions={actions}  {pb['title']}")
+    print(f"valid: {len(loaded)} playbook(s)")
+    return 0
+
+
 def cmd_coverage(args: argparse.Namespace) -> int:
     root = find_repo_root()
     paths = Paths(root)
@@ -276,6 +286,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--all", action="store_true")
     s.add_argument("--authorize", action="store_true", help="confirm targets are authorized lab endpoints")
     s.set_defaults(func=cmd_scenarios)
+
+    pb = sub.add_parser("playbooks", help="validate and list response playbooks (offline)")
+    pb.add_argument("action", choices=["validate", "list"])
+    pb.set_defaults(func=cmd_playbooks)
 
     cv = sub.add_parser("coverage", help="generate the detection coverage matrix (Markdown + JSON)")
     cv.add_argument("--report", help="scenario report JSON (default: latest in reports/runtime)")

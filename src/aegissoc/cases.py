@@ -32,10 +32,16 @@ TRANSITIONS: dict[str, set[str]] = {
 }
 TERMINAL = {"closed", "false_positive"}
 SETTABLE = {"severity", "classification", "confidence", "findings", "escalation_rationale", "closure_reason", "lessons_learned"}
+RESPONSE_STATUSES = {"investigating", "containment_recommended"}
+PENDING_ACTION_STATES = {"proposed", "approved"}
 
 
 class CaseError(ValueError):
     pass
+
+
+def next_action_id(case: dict[str, Any]) -> str:
+    return f"ACT-{len(case.get('response_actions', [])) + 1:03d}"
 
 
 def _now() -> str:
@@ -72,6 +78,54 @@ def _check_transition(case: dict[str, Any], to: str) -> None:
             raise CaseError("true positives require lessons_learned before closing")
     if to == "false_positive" and (case["classification"] != "false_positive" or not case.get("closure_reason")):
         raise CaseError("set classification=false_positive and closure_reason first")
+    pending = [a["action_id"] for a in case.get("response_actions", []) if a["state"] in PENDING_ACTION_STATES]
+    if to in ("resolved", "false_positive") and pending:
+        raise CaseError(f"decide pending response actions first (execute or reject): {pending}")
+
+
+def _response_action(case: dict[str, Any], action_id: str, states: set[str]) -> dict[str, Any]:
+    found = next((a for a in case.get("response_actions", []) if a["action_id"] == action_id), None)
+    if found is None:
+        raise CaseError(f"unknown response action {action_id!r}")
+    if found["state"] not in states:
+        raise CaseError(f"{action_id} is {found['state']}; expected {' or '.join(sorted(states))}")
+    return found
+
+
+def _apply_response(case: dict[str, Any], entry: dict[str, Any]) -> None:
+    """Response actions: proposed -> approved (by someone else) -> simulated, or -> rejected. Nothing is executed."""
+    action, d, actor, at = entry["action"], entry["detail"], entry["actor"], entry["at"]
+    if action == "propose_action":
+        if case["status"] not in RESPONSE_STATUSES:
+            raise CaseError(f"response actions can be proposed only while {' or '.join(sorted(RESPONSE_STATUSES))}")
+        proposed = d["action"]
+        if proposed["endpoint"] not in case["affected_endpoints"]:
+            raise CaseError(f"endpoint {proposed['endpoint']!r} is not an affected endpoint of this case")
+        if proposed["action_id"] != next_action_id(case):
+            raise CaseError(f"action id must be {next_action_id(case)}")
+        actions = case.setdefault("response_actions", [])
+        key = (proposed["action_type"], proposed["endpoint"], proposed["target"])
+        duplicate = next((a for a in actions if (a["action_type"], a["endpoint"], a["target"]) == key
+                          and a["state"] != "rejected"), None)
+        if duplicate:
+            raise CaseError(f"duplicate of {duplicate['action_id']} ({duplicate['state']})")
+        actions.append({**proposed, "state": "proposed", "proposed_by": actor, "proposed_at": at})
+    elif action == "approve_action":
+        target = _response_action(case, d["action_id"], {"proposed"})
+        if actor == target["proposed_by"]:
+            raise CaseError("approval requires a different analyst than the proposer")
+        target.update(state="approved", approved_by=actor, approved_at=at)
+    elif action == "reject_action":
+        target = _response_action(case, d["action_id"], PENDING_ACTION_STATES)
+        if not d.get("reason"):
+            raise CaseError("rejecting a response action requires a reason")
+        target.update(state="rejected", rejected_by=actor, rejected_at=at, rejection_reason=d["reason"])
+    elif action == "execute_action":
+        target = _response_action(case, d["action_id"], {"approved"})
+        if d.get("mode") != "simulation":
+            raise CaseError("only simulated execution is supported; AegisSOC never changes endpoints")
+        target.update(state="simulated", executed_by=actor, executed_at=at, plan=d["plan"],
+                      result="simulated: no change was made to the endpoint")
 
 
 def _apply(case: dict[str, Any], entry: dict[str, Any]) -> None:
@@ -103,6 +157,8 @@ def _apply(case: dict[str, Any], entry: dict[str, Any]) -> None:
         case["evidence"].append(d["evidence"])
     elif action == "recommend":
         case["recommendations"].append(d["text"])
+    elif action in ("propose_action", "approve_action", "reject_action", "execute_action"):
+        _apply_response(case, entry)
     else:
         raise CaseError(f"unknown audit action {action!r}")
 

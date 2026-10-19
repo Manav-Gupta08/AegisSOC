@@ -1,0 +1,25 @@
+id: PB-001
+title: Unexpected sudoers change
+applies_to_rules: ["100200"]
+description: >
+  A file under /etc/sudoers or /etc/sudoers.d changed. Decide whether the change was authorized before
+  touching anything; a reverted drop-in loses evidence unless it is preserved first.
+steps:
+  - kind: manual
+    text: >
+      Read the FIM diff in the attached raw alert (syscheck.diff) and look for NOPASSWD, ALL, or new users and
+      groups. Check whether a package install, an authorized scenario (LNX-003), or a known admin change explains it.
+  - kind: manual
+    text: >
+      Identify who could have written the file: logged-in users and sudo activity on the endpoint around the
+      alert time. On WSL2 endpoints FIM has no actor attribution, so this step relies on other sources.
+  - kind: action
+    action: quarantine_file
+    text: >
+      If the change is unauthorized, quarantine the drop-in (target: its absolute path). Quarantine keeps the
+      file as evidence instead of deleting it.
+  - kind: action
+    action: disable_account
+    text: >
+      If an account gained privilege through the change and is not expected to have it, lock that account
+      (target: the user name) until the owner is confirmed.
