@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 import yaml
 
-from aegissoc import scenarios
 from aegissoc.scenarios import (
     CLEANUP_REQUIRED, FAILED, IDENTITY_COMMAND, INCONCLUSIVE, PASSED, SKIPPED, TIMED_OUT, Clock, Executor, ScenarioError,
     classify, default_executor, load_scenarios, run_scenario, validate_scenario,
