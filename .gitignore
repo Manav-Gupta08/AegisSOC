@@ -16,6 +16,9 @@ reports/runtime/
 # Real incident cases and evidence (lab data); sanitized reports go to reports/examples
 cases/
 
+# Backups contain .env secrets and private keys
+backups/
+
 # Python
 __pycache__/
 *.py[cod]
