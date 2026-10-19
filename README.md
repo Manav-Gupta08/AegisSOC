@@ -35,7 +35,7 @@ Every capability is tracked with one of: **PASS** (verified with evidence), **WA
 | Restore verification | NOT VERIFIED | The one live run (2026-10-14) restored agents, rules, and retention policy but stopped waiting at a partial alert count (38 of 664) and reported FAILED. The wait was fixed and unit-tested; not yet re-run live |
 | Linux host (Docker Engine) | NOT VERIFIED | Tooling supports it (host kernel `vm.max_map_count`, local scenario executor, owner-only secret files); unit-tested only, no live deployment yet |
 | Response playbooks | PASS (offline) | 3 reviewed playbooks; case actions are proposed, approved by a second analyst, and executed **in simulation only**, all in the hash-chained audit trail. Real execution is not implemented by design |
-| AegisSOC web UI | NOT IMPLEMENTED | Alerts are investigated in the Wazuh dashboard; cases, validation, coverage, and metrics are CLI + Markdown/JSON reports |
+| AegisSOC web UI | PASS (offline) | `aegis ui`: read-only pages for overview, system health, detections, validation, coverage, cases (timeline, evidence, response actions), playbooks, and audit log; token-protected, 127.0.0.1 only. Alerts stay in the Wazuh dashboard. Exercised against the lab's real files; not yet used next to a running stack on Linux |
 | Network IDS (Suricata) | NOT IMPLEMENTED | Optional, Profile B |
 
 ## Architecture (Profile A, lightweight)
@@ -84,6 +84,7 @@ aegis prepare          # downloads pinned upstream, verifies SHA-256, generates 
 aegis up               # starts the stack (ports bound to 127.0.0.1)
 aegis provision        # least-privilege reader accounts, default API user rotation, alert retention
 aegis health           # health checks; JSON report in reports/runtime/
+aegis ui               # read-only analyst UI on 127.0.0.1 (prints a one-time login URL)
 ```
 
 Dashboard: `https://127.0.0.1:5601` (user `admin`, password from `.env`).

@@ -69,6 +69,9 @@ needs a separate machine or VM.
    forged events. Enrollment requires a password; event channel is AES-encrypted by Wazuh.
 2. **Manager → indexer**: internal Docker network, mutual TLS with the generated CA.
 3. **Operator → dashboard/API/indexer**: localhost only, authenticated, TLS.
+   **Operator → AegisSOC UI**: `127.0.0.1` only, plain HTTP on loopback, read-only. Access needs the random
+   token printed at start (then an `HttpOnly`, `SameSite=Strict` cookie); requests with another `Host` header are
+   refused (DNS rebinding). The UI reads only repository files and holds no stack credentials.
 4. **Tooling → reports and terminal**: log content is untrusted text. Reports redact known secrets, Markdown/HTML
    output is escaped, and alert text printed to the terminal has control characters (ANSI escapes) neutralized.
 5. **Tooling → endpoint (scenarios)**: commands come only from reviewed manifests, run through the configured

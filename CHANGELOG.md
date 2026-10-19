@@ -45,6 +45,9 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - Response playbooks (`playbooks/`, `aegis playbooks validate|list`) and case response actions
   (`aegis case propose|approve|reject|execute --simulate`): allowlisted action types, validated targets,
   two-person approval, single execution, simulation only, all in the case audit trail.
+- Read-only analyst web UI (`aegis ui`, standard library only): overview, system health, detections, validation
+  history, coverage, cases, playbooks, and audit log. Loopback only, one-time token and strict cookie, `Host`
+  check, restrictive CSP, all file content escaped.
 
 ### Changed
 - Scenario manifests no longer name a WSL distro; the transport is a host setting.

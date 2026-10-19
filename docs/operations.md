@@ -6,6 +6,7 @@
 aegis health                 # 8 checks; exit 0 PASS / 1 WARNING / 2 FAIL; JSON report in reports/runtime
 aegis metrics --days 7       # detection, volume, availability, case, resource metrics (JSON + Markdown)
 aegis scenarios run --all --authorize   # regression suite after any rule/config/version change
+aegis ui                     # read-only view of the above, cases, and audit history (127.0.0.1)
 ```
 
 Health is never inferred from the dashboard loading. A stopped stack reports FAIL with connection errors

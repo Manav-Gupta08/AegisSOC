@@ -41,6 +41,7 @@ Status of each safeguard uses PASS / NOT VERIFIED / NOT IMPLEMENTED.
 | T14 | Supply-chain tampering of upstream deployment files | Pinned tag + SHA-256 verification before extraction; safe tar extraction (`filter="data"`); images pinned by digest (TOFU, 2026-10-13) | PASS (hash verified on live fetch; traversal blocked in unit test; Compose resolves digest-pinned images) |
 | T15 | Simulations affecting non-lab systems | Nothing runs without `--authorize`; the target must be the single active agent in the scenario's group; the executor must report that agent's id and name before any command runs | PASS (authorization and single-target rules: unit tests and M5-SCN-001). NOT VERIFIED live: identity check |
 | T16 | Local users reading secrets on a shared Linux host | `.env` written `0600`, rendered runtime directory `0700`; backups stored with restricted access | PASS (unit test for `.env` mode). NOT VERIFIED: modes of certificates created by the upstream generator |
+| T17 | Unauthorized access to the AegisSOC UI (other local users, malicious web pages, injected case text) | Binds `127.0.0.1` only; random per-start token exchanged for an `HttpOnly`, `SameSite=Strict` cookie; unexpected `Host` headers refused (DNS rebinding); read-only (`GET`/`HEAD`); CSP `default-src 'none'`; all file content HTML-escaped; token never logged | PASS (unit tests over HTTP). Residual: plain HTTP on loopback, so a local user able to sniff loopback traffic could capture the cookie |
 
 ## Known blind spots and residual risks
 
