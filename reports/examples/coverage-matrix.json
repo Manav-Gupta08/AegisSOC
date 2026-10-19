@@ -1,0 +1,115 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-10-14T04:09:48.073587+00:00",
+  "scenario_report_generated_at": "2026-10-13T11:54:32.940911+00:00",
+  "rows": [
+    {
+      "rule_id": 100100,
+      "title": "Repeated local authentication failures for one user",
+      "techniques": [
+        "T1110.001"
+      ],
+      "rule_status": "tested",
+      "telemetry": [
+        "journald via wazuh-logcollector (PAM, sudo, unix_chkpwd) on Linux agents"
+      ],
+      "logtest_cases": 2,
+      "positive_scenarios": [
+        "LNX-001"
+      ],
+      "negative_scenarios": [
+        "LNX-002"
+      ],
+      "scenario_results": {
+        "LNX-001": "PASSED",
+        "LNX-002": "PASSED"
+      },
+      "observed_in_lab": true,
+      "min_latency_s": 10.022,
+      "limitations": [
+        "Each sudo attempt can emit 2 failure events (pam_unix + unix_chkpwd), so 6 events can be ~3 attempts.",
+        "Requires the srcuser field; failures decoded without it are not counted.",
+        "Spraying many users (one attempt each) does not trigger it."
+      ]
+    },
+    {
+      "rule_id": 100200,
+      "title": "sudoers configuration changed",
+      "techniques": [
+        "T1548.003"
+      ],
+      "rule_status": "tested",
+      "telemetry": [
+        "Wazuh FIM on /etc/sudoers and /etc/sudoers.d (group linux agent.conf)"
+      ],
+      "logtest_cases": 0,
+      "positive_scenarios": [
+        "LNX-003"
+      ],
+      "negative_scenarios": [],
+      "scenario_results": {
+        "LNX-003": "PASSED"
+      },
+      "observed_in_lab": true,
+      "min_latency_s": 1.438,
+      "limitations": [
+        "On WSL2, FIM runs in real-time mode without whodata, so the actor is not recorded.",
+        "Changes reverted between FIM events may be missed if the agent is offline."
+      ]
+    },
+    {
+      "rule_id": 100201,
+      "title": "Scheduled task or systemd unit changed",
+      "techniques": [
+        "T1053.003",
+        "T1543.002"
+      ],
+      "rule_status": "tested",
+      "telemetry": [
+        "Wazuh FIM on /etc/crontab, /etc/cron.d, /var/spool/cron/crontabs, /etc/systemd/system"
+      ],
+      "logtest_cases": 0,
+      "positive_scenarios": [
+        "LNX-004"
+      ],
+      "negative_scenarios": [],
+      "scenario_results": {
+        "LNX-004": "PASSED"
+      },
+      "observed_in_lab": true,
+      "min_latency_s": 0.161,
+      "limitations": [
+        "User-level systemd units (~/.config/systemd/user) are not monitored.",
+        "No actor attribution on WSL2 (real-time mode).",
+        "Only the systemd path has a scenario (LNX-004); the cron path (T1053.003) is untested."
+      ]
+    },
+    {
+      "rule_id": 100202,
+      "title": "Local account database changed",
+      "techniques": [
+        "T1136.001",
+        "T1098"
+      ],
+      "rule_status": "tested",
+      "telemetry": [
+        "Wazuh FIM on /etc/passwd, /etc/group, /etc/shadow, /etc/gshadow (no content diffs for shadow files)"
+      ],
+      "logtest_cases": 0,
+      "positive_scenarios": [
+        "LNX-005"
+      ],
+      "negative_scenarios": [],
+      "scenario_results": {
+        "LNX-005": "PASSED"
+      },
+      "observed_in_lab": true,
+      "min_latency_s": 0.15,
+      "limitations": [
+        "Does not identify which account changed; review the passwd/group diff.",
+        "No actor attribution on WSL2 (real-time mode).",
+        "Depends on directory-level FIM of /etc; file-level watches are lost after atomic replaces (M2-LNX-002)."
+      ]
+    }
+  ]
+}

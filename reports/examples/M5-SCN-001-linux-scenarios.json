@@ -1,0 +1,224 @@
+{
+  "schema_version": "1.0",
+  "tool": "aegissoc.scenarios",
+  "tool_version": "0.1.0",
+  "generated_at": "2026-10-13T11:54:32.940911+00:00",
+  "environment": {
+    "wazuh_version": "4.14.8",
+    "git": {
+      "commit": "b38dc1238a709801110eaa3ed74d0820fbded610",
+      "detections_dirty": true
+    },
+    "rule_files": {
+      "aegissoc_linux_rules.xml": "fac505201512b1d11c3d56319abb2b30388d4c1dd14f0d2c62262fdebaf474ae"
+    }
+  },
+  "summary": {
+    "PASSED": 5
+  },
+  "results": [
+    {
+      "scenario_id": "LNX-001",
+      "title": "Repeated local sudo authentication failures",
+      "technique": "T1110.001",
+      "status": "PASSED",
+      "reason": "expected detections observed",
+      "started_at": "2026-10-13T11:50:46.875072+00:00",
+      "finished_at": "2026-10-13T11:51:03.449056+00:00",
+      "agent": {
+        "id": "001",
+        "name": "aegis-wsl-ubuntu",
+        "version": "Wazuh v4.14.8"
+      },
+      "execute_exit_code": 0,
+      "expected": {
+        "telemetry_rules": [
+          "5557"
+        ],
+        "detection_rules": [
+          "100100"
+        ]
+      },
+      "observed_alerts": [
+        {
+          "timestamp": "2026-10-13T11:50:48.890+0000",
+          "rule_id": "5557",
+          "level": 5,
+          "path": null
+        },
+        {
+          "timestamp": "2026-10-13T11:50:50.892+0000",
+          "rule_id": "5557",
+          "level": 5,
+          "path": null
+        },
+        {
+          "timestamp": "2026-10-13T11:50:52.894+0000",
+          "rule_id": "5557",
+          "level": 5,
+          "path": null
+        },
+        {
+          "timestamp": "2026-10-13T11:50:54.895+0000",
+          "rule_id": "5557",
+          "level": 5,
+          "path": null
+        },
+        {
+          "timestamp": "2026-10-13T11:50:56.895+0000",
+          "rule_id": "5557",
+          "level": 5,
+          "path": null
+        },
+        {
+          "timestamp": "2026-10-13T11:50:56.897+0000",
+          "rule_id": "100100",
+          "level": 10,
+          "path": null
+        }
+      ],
+      "first_detection_latency_s": 10.022,
+      "cleanup": "not_required",
+      "scenario_sha256": "f293f39b7e6382fb4efce8e4cbf3a2736c343683799de6cc74405c09cfffddc2"
+    },
+    {
+      "scenario_id": "LNX-002",
+      "title": "Single failed sudo authentication does not trigger brute-force correlation",
+      "technique": "T1110.001",
+      "status": "PASSED",
+      "reason": "telemetry observed; no forbidden rule fired",
+      "started_at": "2026-10-13T11:53:01.896061+00:00",
+      "finished_at": "2026-10-13T11:53:48.749029+00:00",
+      "agent": {
+        "id": "001",
+        "name": "aegis-wsl-ubuntu",
+        "version": "Wazuh v4.14.8"
+      },
+      "execute_exit_code": 0,
+      "expected": {
+        "telemetry_rules": [
+          "5557"
+        ],
+        "forbidden_rules": [
+          "100100"
+        ]
+      },
+      "observed_alerts": [
+        {
+          "timestamp": "2026-10-13T11:53:02.914+0000",
+          "rule_id": "5557",
+          "level": 5,
+          "path": null
+        }
+      ],
+      "first_detection_latency_s": null,
+      "cleanup": "not_required",
+      "scenario_sha256": "1e80f7cdef7dd6773b7ceb10ef1f3ca5e653751804547df02b50adf10a486aa8"
+    },
+    {
+      "scenario_id": "LNX-003",
+      "title": "sudoers drop-in created and removed",
+      "technique": "T1548.003",
+      "status": "PASSED",
+      "reason": "expected detections observed",
+      "started_at": "2026-10-13T11:53:52.355472+00:00",
+      "finished_at": "2026-10-13T11:54:05.829101+00:00",
+      "agent": {
+        "id": "001",
+        "name": "aegis-wsl-ubuntu",
+        "version": "Wazuh v4.14.8"
+      },
+      "execute_exit_code": 0,
+      "expected": {
+        "detection_rules": [
+          "100200"
+        ]
+      },
+      "observed_alerts": [
+        {
+          "timestamp": "2026-10-13T11:53:53.793+0000",
+          "rule_id": "100200",
+          "level": 10,
+          "path": "/etc/sudoers.d/aegis-scenario"
+        },
+        {
+          "timestamp": "2026-10-13T11:53:53.836+0000",
+          "rule_id": "100200",
+          "level": 10,
+          "path": "/etc/sudoers.d/aegis-scenario"
+        }
+      ],
+      "first_detection_latency_s": 1.438,
+      "cleanup": "verified",
+      "scenario_sha256": "e6806c4d1c2eee5b3f807eb009cca9926a120fa9be520bb6669b0f4839229661"
+    },
+    {
+      "scenario_id": "LNX-004",
+      "title": "systemd unit file created and removed (never enabled)",
+      "technique": "T1543.002",
+      "status": "PASSED",
+      "reason": "expected detections observed",
+      "started_at": "2026-10-13T11:54:06.065016+00:00",
+      "finished_at": "2026-10-13T11:54:16.954476+00:00",
+      "agent": {
+        "id": "001",
+        "name": "aegis-wsl-ubuntu",
+        "version": "Wazuh v4.14.8"
+      },
+      "execute_exit_code": 0,
+      "expected": {
+        "detection_rules": [
+          "100201"
+        ]
+      },
+      "observed_alerts": [
+        {
+          "timestamp": "2026-10-13T11:54:06.226+0000",
+          "rule_id": "100201",
+          "level": 10,
+          "path": "/etc/systemd/system/aegis-scenario.service"
+        }
+      ],
+      "first_detection_latency_s": 0.161,
+      "cleanup": "verified",
+      "scenario_sha256": "7c6e32e9a5034e53043321a7c382805579f136c1f1aa432fe2f4213354fe093c"
+    },
+    {
+      "scenario_id": "LNX-005",
+      "title": "Local group created and removed",
+      "technique": "T1098",
+      "status": "PASSED",
+      "reason": "expected detections observed",
+      "started_at": "2026-10-13T11:54:17.180202+00:00",
+      "finished_at": "2026-10-13T11:54:32.798893+00:00",
+      "agent": {
+        "id": "001",
+        "name": "aegis-wsl-ubuntu",
+        "version": "Wazuh v4.14.8"
+      },
+      "execute_exit_code": 0,
+      "expected": {
+        "detection_rules": [
+          "100202"
+        ]
+      },
+      "observed_alerts": [
+        {
+          "timestamp": "2026-10-13T11:54:17.330+0000",
+          "rule_id": "100202",
+          "level": 8,
+          "path": "/etc/group"
+        },
+        {
+          "timestamp": "2026-10-13T11:54:17.348+0000",
+          "rule_id": "100202",
+          "level": 8,
+          "path": "/etc/gshadow"
+        }
+      ],
+      "first_detection_latency_s": 0.15,
+      "cleanup": "verified",
+      "scenario_sha256": "8297595a30c1a86881c3eb6dc11f07b77247a84b50a4563b3b232c50d627e63f"
+    }
+  ]
+}
