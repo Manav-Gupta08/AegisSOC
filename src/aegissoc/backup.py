@@ -90,6 +90,8 @@ def create(ctx: Context, snapshot: dict[str, Any], run: Runner = subprocess.run,
     folder = backup_root(ctx) / f"aegissoc-backup-{stamp}"
     (folder / "volumes").mkdir(parents=True)
     (folder / "files").mkdir()
+    # The backup holds .env and private keys; owner-only on POSIX hosts.
+    os.chmod(folder, 0o700)
 
     volumes = stack_volumes(project, run)
     if not volumes:

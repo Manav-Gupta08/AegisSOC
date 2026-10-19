@@ -1,5 +1,7 @@
 """Backup/restore logic tests. Docker is replaced by a recorder; no containers or volumes are touched."""
 import json
+import os
+import stat
 import subprocess
 from pathlib import Path
 
@@ -23,6 +25,31 @@ def test_verify_archives_detects_missing_and_modified(tmp_path):
     problems = verify_archives(tmp_path, manifest)
     assert any("missing" in p for p in problems) and any("mismatch" in p for p in problems)
     assert not any(p.startswith("volumes/v1") for p in problems)
+
+
+def test_create_restarts_stack_and_records_hashes(ctx):
+    ctx.paths.runtime_dir.mkdir(parents=True)
+    (ctx.paths.runtime_dir / "authd.pass").write_text("x")
+    ctx.paths.certs_dir(ctx.lock).mkdir(parents=True)
+    (ctx.paths.certs_dir(ctx.lock) / "root-ca.pem").write_text("x")
+    calls = []
+
+    def run(cmd, **kw):
+        calls.append(cmd)
+        if cmd[:3] == ["docker", "volume", "ls"]:
+            return subprocess.CompletedProcess(cmd, 0, "aegissoc_wazuh_etc\n", "")
+        if "-czf" in cmd:
+            dst = next(v.rsplit(":", 1)[0] for v in cmd if v.endswith(":/dst"))
+            Path(dst, "aegissoc_wazuh_etc.tar.gz").write_bytes(b"archive")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    folder = backup.create(ctx, {"alert_count": 1}, run=run, log=lambda m: None)
+    manifest = json.loads((folder / "manifest.json").read_text())
+    assert verify_archives(folder, manifest) == []
+    assert set(manifest["files"]) == {"env", "stack.lock.json", "runtime", "certs"}
+    assert [c[-1] for c in calls if c[:2] == ["docker", "compose"]] == ["stop", "start"]
+    if os.name == "posix":
+        assert stat.S_IMODE(folder.stat().st_mode) == 0o700
 
 
 def test_latest_backup_skips_incomplete_folders(ctx):
