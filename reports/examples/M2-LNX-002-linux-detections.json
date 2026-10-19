@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "evidence_id": "M2-LNX-002",
+  "type": "detection_validation",
+  "sanitized": true,
+  "sanitization": "No host or user identifiers present. Timestamps and rule data unmodified.",
+  "environment": {
+    "wazuh_version": "4.14.8",
+    "endpoint": "WSL2 Ubuntu 26.04.1 LTS, agent 001, group linux",
+    "rules_file": "detections/wazuh/rules/aegissoc_linux_rules.xml"
+  },
+  "logtest": {
+    "rule": "100100",
+    "first_run": "FAILED - rule used <same_field>srcuser</same_field>, which never matches static fields; 10 events produced only 5557",
+    "fix": "<same_srcuser />; validator now rejects <same_field> on static fields (regression test added)",
+    "second_run": "PASSED positive (6 failures, same user -> 100100) and negative (6 failures across 3 users -> no 100100)"
+  },
+  "e2e": [
+    {
+      "triggered_at": "2026-10-13T11:26:56Z",
+      "procedure": "Create comment-only /etc/sudoers.d/aegis-e2e (visudo -c OK), never-enabled /etc/systemd/system/aegis-e2e.service, and group aegis-e2e-grp; wait 10 s; remove all",
+      "observed": [
+        {"timestamp": "11:27:02.342", "rule_id": "100200", "event": "added", "path": "/etc/sudoers.d/aegis-e2e"},
+        {"timestamp": "11:27:02.360", "rule_id": "100202", "event": "modified", "path": "/etc/group"},
+        {"timestamp": "11:27:02.398", "rule_id": "100201", "event": "added", "path": "/etc/systemd/system/aegis-e2e.service"},
+        {"timestamp": "11:27:02.413", "rule_id": "100202", "event": "modified", "path": "/etc/gshadow"},
+        {"timestamp": "11:27:13.901", "rule_id": "100201", "event": "deleted", "path": "/etc/systemd/system/aegis-e2e.service"},
+        {"timestamp": "11:27:13.901", "rule_id": "100200", "event": "deleted", "path": "/etc/sudoers.d/aegis-e2e"}
+      ],
+      "missing": "No alert for /etc/group on groupdel",
+      "cleanup": "verified: no files, no group",
+      "status": "PARTIAL"
+    },
+    {
+      "finding": "Real-time FIM watches on individual files are lost after an atomic replace (write temp + rename). A second groupadd/groupdel produced 0 alerts.",
+      "fix": "Monitor /etc and sensitive subdirectories as directories (deployment/wazuh/agent-groups/linux/agent.conf)",
+      "triggered_at": "2026-10-13T11:32:16Z",
+      "procedure": "groupadd/groupdel aegis-e2e-r1, then aegis-e2e-r2 (4 atomic replacements of /etc/group)",
+      "observed": {"rule_id": "100202", "path": "/etc/group", "alerts": 4, "times": ["11:32:16", "11:32:21", "11:32:25", "11:32:29"]},
+      "cleanup": "verified: 0 aegis-e2e-r* groups",
+      "status": "PASSED"
+    }
+  ],
+  "limitations": [
+    "No actor attribution (real-time mode; kernel audit unavailable on WSL2).",
+    "Watching /etc in real time increases event volume; measured in Phase 7."
+  ]
+}
