@@ -34,7 +34,7 @@ def cmd_preflight(_: argparse.Namespace) -> int:
 def cmd_init_secrets(_: argparse.Namespace) -> int:
     paths = Paths(find_repo_root())
     added = deploy.init_secrets(paths)
-    print(f"Added to {paths.env_file}: {', '.join(added)}" if added else f"{paths.env_file} already complete; nothing changed")
+    print(f"Added to {paths.env_file}: {', '.join(added)}" if added else f"{paths.env_file} already complete")
     return 0
 
 

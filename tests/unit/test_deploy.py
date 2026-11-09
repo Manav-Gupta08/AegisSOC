@@ -157,6 +157,15 @@ def test_env_file_is_owner_only(ctx):
     assert stat.S_IMODE(ctx.paths.env_file.stat().st_mode) == 0o600
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+def test_init_secrets_secures_complete_existing_env_without_rewriting(ctx):
+    original = ctx.paths.env_file.read_bytes()
+    ctx.paths.env_file.chmod(0o755)
+    assert deploy.init_secrets(ctx.paths) == []
+    assert ctx.paths.env_file.read_bytes() == original
+    assert stat.S_IMODE(ctx.paths.env_file.stat().st_mode) == 0o600
+
+
 def _no_run(*args, **kwargs):
     pytest.fail("must not run a command on this platform")
 

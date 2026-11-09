@@ -69,6 +69,7 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - Metrics Markdown escapes alert-derived text (rule descriptions interpolate decoded fields such as user names).
 
 ### Fixed
+- `init-secrets` restricts permissions on an existing complete `.env` file on POSIX hosts without rewriting its contents.
 - Linux agent group is configured to collect `/var/log/audit/audit.log` in Wazuh's audit format; live ingestion still needs verification.
 - Default dashboard port moved 8443 → 5601 (8443 held by a Windows service on the reference host).
 - TLS clients now send the expected service name as SNI; the indexer rejected IP-only handshakes.

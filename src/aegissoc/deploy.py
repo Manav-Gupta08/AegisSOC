@@ -92,6 +92,8 @@ def init_secrets(paths: Paths) -> list[str]:
 
     if added or raw_has_bom:
         write_private(paths.env_file, "\n".join(lines) + "\n")
+    elif os.name == "posix":
+        os.chmod(paths.env_file, 0o600)
     return added
 
 
