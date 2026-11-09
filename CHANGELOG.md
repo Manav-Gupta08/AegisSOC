@@ -55,6 +55,7 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
   shown on the UI health page.
 - `aegis agent-config assign --agent <name> --group <group>` for optional groups.
 - CI lints shell scripts (`bash -n`, shellcheck) and parses every PowerShell script.
+- CI runs Python tests and offline validation on Windows as well as Linux.
 
 ### Changed
 - Windows agent installer restricts `authd.pass` before writing the password, explains `Invalid group` failures,
@@ -68,6 +69,7 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - Metrics Markdown escapes alert-derived text (rule descriptions interpolate decoded fields such as user names).
 
 ### Fixed
+- Linux agent group is configured to collect `/var/log/audit/audit.log` in Wazuh's audit format; live ingestion still needs verification.
 - Default dashboard port moved 8443 → 5601 (8443 held by a Windows service on the reference host).
 - TLS clients now send the expected service name as SNI; the indexer rejected IP-only handshakes.
 - `.env` files with a UTF-8 BOM are normalized by `init-secrets` and refused by `up`.

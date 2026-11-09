@@ -1,6 +1,8 @@
+from unittest.mock import Mock
+
 import pytest
 
-from aegissoc.clients import ServiceError
+from aegissoc.clients import Indexer, ServiceError, WazuhApi, make_session
 from aegissoc.provision import READER_API_USER, provision_api, provision_indexer
 from aegissoc.redact import REDACTED, redact
 
@@ -16,6 +18,71 @@ def test_redact_prefers_longest_secret_first():
 
 def test_redact_ignores_empty_secrets():
     assert redact("text", ["", None]) == "text"
+
+
+def test_client_session_requires_ca_and_enables_service_hostname_verification(tmp_path):
+    ca_file = tmp_path / "ca.pem"
+    with pytest.raises(FileNotFoundError):
+        make_session(ca_file, "wazuh.manager")
+    ca_file.write_text("test certificate")
+    session = make_session(ca_file, "wazuh.manager", (tmp_path / "client.pem", tmp_path / "client.key"))
+    assert session.verify == str(ca_file)
+    assert session.cert == (str(tmp_path / "client.pem"), str(tmp_path / "client.key"))
+    adapter = session.get_adapter("https://127.0.0.1")
+    assert adapter.poolmanager.connection_pool_kw["assert_hostname"] == "wazuh.manager"
+    assert adapter.poolmanager.connection_pool_kw["server_hostname"] == "wazuh.manager"
+    session.close()
+
+
+def test_wazuh_api_authentication_and_request():
+    session = Mock()
+    session.post.return_value = Mock(status_code=200, json=Mock(return_value={"data": {"token": "test-token"}}))
+    session.request.return_value = Mock(status_code=200, json=Mock(return_value={"data": {"affected_items": [{"id": "001"}]}}))
+    api = WazuhApi(session, "https://127.0.0.1:55000/")
+    with pytest.raises(ServiceError, match="not authenticated"):
+        api.request("GET", "/agents")
+    api.authenticate("reader", "test-password")
+    assert api.affected_items("/agents", {"limit": 1}) == [{"id": "001"}]
+    session.request.assert_called_once_with("GET", "https://127.0.0.1:55000/agents",
+                                            headers={"Authorization": "Bearer test-token"}, timeout=15.0,
+                                            params={"limit": 1})
+
+
+@pytest.mark.parametrize("status,body,match", [
+    (403, {}, "HTTP 403"),
+    (200, {"error": 123, "message": "denied"}, "error 123: denied"),
+])
+def test_wazuh_api_rejects_http_and_api_errors(status, body, match):
+    session = Mock()
+    session.post.return_value = Mock(status_code=200, json=Mock(return_value={"data": {"token": "test-token"}}))
+    session.request.return_value = Mock(status_code=status, json=Mock(return_value=body))
+    api = WazuhApi(session, "https://127.0.0.1:55000")
+    api.authenticate("reader", "test-password")
+    with pytest.raises(ServiceError, match=match):
+        api.request("GET", "/agents")
+
+
+def test_wazuh_api_rejects_failed_authentication():
+    session = Mock()
+    session.post.return_value = Mock(status_code=401)
+    with pytest.raises(ServiceError, match="HTTP 401") as error:
+        WazuhApi(session, "https://127.0.0.1:55000").authenticate("reader", "test-password")
+    assert error.value.status_code == 401
+
+
+@pytest.mark.parametrize("status", [200, 403])
+def test_indexer_request_success_and_error(status):
+    session = Mock()
+    session.request.return_value = Mock(status_code=status, json=Mock(return_value={"count": 1}))
+    indexer = Indexer(session, "https://127.0.0.1:9200/", "reader", "test-password")
+    if status == 200:
+        assert indexer.request("GET", "/alerts") == {"count": 1}
+    else:
+        with pytest.raises(ServiceError, match="HTTP 403") as error:
+            indexer.request("GET", "/alerts")
+        assert error.value.status_code == 403
+    session.request.assert_called_once_with("GET", "https://127.0.0.1:9200/alerts",
+                                            auth=("reader", "test-password"), timeout=15.0)
 
 
 class RecordingApi:

@@ -17,21 +17,20 @@ The `agents` health check warns when an agent's group config is not `synced` (co
 | Source | Collects | Why | Est. volume | Validate | Blind spots | Status |
 |---|---|---|---|---|---|---|
 | journald (agent default) | PAM auth, sudo, sessions, systemd | Authentication and privilege events | Low | M1-E2E-001: failed password → rule 5557 | sudo-rs log format not matched by Wazuh sudo rules; events lost if agent is stopped | PASS |
-| auditd `audit-wazuh-c` | `execve` as root from user sessions (`auid>=1000`) | Who ran what with privilege | Low–medium (per root command) | Run `sudo id` → rule 80792 with `audit.exe` | Kernel audit is inaccessible from WSL2 distros (`auditctl -s` fails); see M2-LNX-001 | NOT AVAILABLE on WSL2 |
+| auditd `audit-wazuh-c` | `execve` as root from user sessions (`auid>=1000`) | Who ran what with privilege | Low–medium (per root command) | Run `sudo id` → rule 80792 with `audit.exe` | Kernel audit is inaccessible from WSL2 distros (`auditctl -s` fails); see M2-LNX-001 | NOT VERIFIED on Linux; NOT AVAILABLE on WSL2 |
 | FIM real-time (directories) | `/etc` (whole directory), plus diffs for sudoers.d, cron.d, systemd/system, profile.d, sshd_config.d; `/var/spool/cron/crontabs`, `/root/.ssh` | Privilege, persistence, and account changes | Low–medium (all of /etc) | M2-LNX-001/002: add/delete alerts within 1 s; 4/4 atomic replaces of `/etc/group` alerted | **No actor attribution** (no audit on WSL2); file-level watches are lost after atomic replaces, so only directories are watched; `/home/*/.ssh` not covered | PASS (realtime) |
 | FIM scheduled (agent default) | `/etc`, `/usr/bin`, `/usr/sbin`, `/bin`, `/sbin`, `/boot` every 12 h | Baseline integrity | Low | Scan start/end in agent log | Changes between scans are seen late | PASS (scan observed) |
 | Rootcheck/SCA (agent default) | Host anomalies, CIS policy | Hygiene | Rootcheck noisy (rule 510) | Alerts present | No CIS policy for Ubuntu 26.04 (skipped) | PASS (running) |
 
 Setup: `sudo deployment/endpoints/linux/configure-auditd.sh` on Linux systems with working kernel audit
 (it exits with a clear error and disables auditd on WSL2), then `sudo systemctl restart wazuh-agent`.
-The audit rules are kept for a future real Linux VM endpoint (Profile B), which would also need an
-`audit.log` `<localfile>` in its group config.
+The Linux group config is configured to collect `/var/log/audit/audit.log` using Wazuh's `audit` log format.
 
 Default agent `localfile` entries for nginx logs remain (files absent); harmless but noted.
 
 **Linux hosts.** When the stack runs on Linux, the host itself is the Linux endpoint. Kernel audit is normally
-available there, so `configure-auditd.sh` applies, but the `linux` group config has no `audit.log` `<localfile>`
-yet, so audit events are not collected (NOT IMPLEMENTED). The statuses above were measured on the WSL2 endpoint.
+available there, so `configure-auditd.sh` applies. Audit collection is configured but has not yet been verified
+on a Linux host. The other statuses above were measured on the WSL2 endpoint.
 
 ## Windows endpoint (host, group `windows`)
 

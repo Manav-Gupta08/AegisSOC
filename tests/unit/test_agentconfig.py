@@ -17,6 +17,12 @@ def test_repository_group_configs_are_valid():
     assert {"linux", "windows"} <= names
 
 
+def test_linux_group_collects_audit_log():
+    root = ET.parse(ROOT / "deployment" / "wazuh" / "agent-groups" / "linux" / "agent.conf").getroot()
+    assert any(localfile.findtext("location") == "/var/log/audit/audit.log"
+               and localfile.findtext("log_format") == "audit" for localfile in root.findall("localfile"))
+
+
 @pytest.mark.parametrize("text,match", [
     ("<agent_config><localfile>", "well-formed"),
     ("<ossec_config/>", "root element"),
